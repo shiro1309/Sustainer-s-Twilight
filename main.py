@@ -1,12 +1,12 @@
 # main.py
 import pygame
 
-from scripts.entity import Entity, Player
-from scripts.startscreen import *
-from scripts.enemy import Enemy
-from scripts.events import handle_events
-from scripts.utils import draw_buttons, Button
-from scripts.gameover import GameOverScreen
+from assets.scripts.entity import Entity, Player
+from assets.scripts.startscreen import *
+from assets.scripts.enemy import Enemy
+from assets.scripts.events import handle_events
+from assets.scripts.utils import draw_buttons, Button
+from assets.scripts.gameover import GameOverScreen
 
 from settings import *
 
@@ -92,7 +92,7 @@ class Game:
         self.current_state = START_SCREEN
         self.current_state = self.start_screen.run(self.current_state)  # Run the start screen
         self.current_state = GAME_PLAY
-        self.delta_time = self.clock.tick(60) / 1000.0
+        self.delta_time = self.clock.tick(FPS) / 1000.0
         self.score = 0
         self.all_sprites = pygame.sprite.Group()
         self.player = Player(WIDTH // 2, HEIGHT // 2)
@@ -110,6 +110,7 @@ class Game:
         pygame.display.flip()
 
     def handle_action(self, action):
+        # ----------- this section has been moved ----------- #
         # ----------- handles the main menu actions ----------- #
         #if self.current_state == START_SCREEN:
         #    if action == "start":
@@ -137,17 +138,17 @@ class Game:
             elif action == "options":
                 print("Transition to options")
             elif action == "quit":
-                #print("run savings script for the game")
-                #print("check states for new achivments")
-                #print("go back into main menu and prepere for a restart of the game")
+                print("run savings script for the game")
+                print("check states for new achivments")
+                print("go back into main menu and prepere for a restart of the game")
                 self.show_start_screen()
 
         # ----------- handles the game over actions ----------- #
         elif self.current_state == GAME_OVER:
             if action == "return_to_menu":
-                #print("run savings script for the game")
-                #print("check states for new achivments")
-                #print("go back into main menu and prepere for a restart of the game")
+                print("run savings script for the game")
+                print("check states for new achivments")
+                print("go back into main menu and prepere for a restart of the game")
                 self.show_start_screen()
 
 if __name__ == "__main__":

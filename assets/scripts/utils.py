@@ -10,6 +10,19 @@ def draw_buttons(buttons, surf):
         pygame.draw.rect(surf, (200, 200, 200), button.rect)
         draw_text(button.text, button.rect.centerx, button.rect.centery, button.color, button.font, surf)
 
+def load_sprites(sprite_sheet_path, sprite_size, animation_names):
+    sprite_sheets = {}
+    sprite_sheet = pygame.image.load(sprite_sheet_path).convert_alpha()
+
+    for i, name in enumerate(animation_names):
+        sprites = []
+        for x in range(sprite_sheet.get_width() // sprite_size[0]):
+            sprite = pygame.Surface.subsurface(sprite_sheet, (x * sprite_size[0], i * sprite_size[1], sprite_size[0], sprite_size[1]))
+            sprites.append(sprite)
+        
+        sprite_sheets[name] = sprites
+    return sprite_sheets
+
 class Button:
     def __init__(self, text, rect, action, color):
         self.text = text

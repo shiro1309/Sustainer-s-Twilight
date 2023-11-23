@@ -1,8 +1,8 @@
 # start_screen.py
 import pygame
 from settings import *
-from scripts.events import handle_events
-from scripts.utils import draw_buttons, Button
+from assets.scripts.events import handle_events
+from assets.scripts.utils import draw_buttons, Button
 
 
 class StartScreen:

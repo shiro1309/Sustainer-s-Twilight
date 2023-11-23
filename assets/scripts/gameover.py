@@ -1,7 +1,7 @@
 # game_over_screen.py
 import pygame
 from settings import WIDTH, HEIGHT, WHITE
-from scripts.utils import Button
+from assets.scripts.utils import Button
 
 class GameOverScreen:
     def __init__(self, score):
