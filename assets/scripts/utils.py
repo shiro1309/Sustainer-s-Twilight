@@ -18,7 +18,6 @@ def load_sprites(sprite_sheet_path, sprite_size, animation_names):
     for i, name in enumerate(animation_names):
         sprites = []
         for x in range(sprite_sheet.get_width() // sprite_size[0]):
-            print(x * sprite_size[0], i * sprite_size[1], sprite_size[0], sprite_size[1])
             sprite = pygame.Surface.subsurface(sprite_sheet, (x * sprite_size[0], i * sprite_size[1], sprite_size[0], sprite_size[1]))
             sprites.append(sprite)
         
