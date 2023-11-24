@@ -8,7 +8,7 @@ from assets.scripts.events import handle_events
 from assets.scripts.utils import draw_buttons, Button
 from assets.scripts.gameover import GameOverScreen
 
-from settings import *
+from assets.scripts.settings import *
 
 # Initialize pygame
 pygame.init()
@@ -39,8 +39,8 @@ class Game:
         self.current_state = START_SCREEN
         self.score = 0
         self.all_sprites = pygame.sprite.Group()
-        self.player = Player(WIDTH // 2, HEIGHT // 2)
-        self.enemy = Enemy(WIDTH // 4, HEIGHT // 4, self.player)
+        self.player = Player(WIDTH // 2, HEIGHT // 2, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
+        self.enemy = Enemy(80,80, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
         self.all_sprites.add(self.player, self.enemy)
         
         self.show_start_screen()
@@ -56,7 +56,7 @@ class Game:
             return handle_events(self.current_state, self.game_over_buttons)
 
     def delta_update(self):
-        self.delta_time = self.clock.tick(FPS) / 1000.0  # Convert to seconds
+        self.delta_time = self.clock.tick() / 1000.0  # Convert to seconds
 
     def update(self):
         self.delta_update()
@@ -64,8 +64,12 @@ class Game:
         self.all_sprites.update(self.delta_time)
 
     def draw(self):
-        self.game_screen.fill(BLACK)
-        self.all_sprites.draw(self.game_screen)
+        self.game_screen.fill((125,125,125))
+        for sprite in self.all_sprites:
+                if hasattr(sprite, 'draw'):
+                    sprite.draw(self.game_screen)
+                else:
+                    self.game_screen.blit(sprite.image, sprite.rect.topleft)
         pygame.display.flip()
 
     def run(self):
@@ -89,14 +93,16 @@ class Game:
         exit()
 
     def show_start_screen(self):
+        for i in self.all_sprites:
+            self.all_sprites.remove(i)
         self.current_state = START_SCREEN
         self.current_state = self.start_screen.run(self.current_state)  # Run the start screen
         self.current_state = GAME_PLAY
         self.delta_time = self.clock.tick(FPS) / 1000.0
         self.score = 0
         self.all_sprites = pygame.sprite.Group()
-        self.player = Player(WIDTH // 2, HEIGHT // 2)
-        self.enemy = Enemy(80, 80, self.player)
+        self.player = Player(WIDTH // 2, HEIGHT // 2, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
+        self.enemy = Enemy(80, 80, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
         self.all_sprites.add(self.player, self.enemy)
 
     def show_game_menu(self):

@@ -1,7 +1,7 @@
 import pygame
 import sys
 
-from settings import *
+from assets.scripts.settings import *
 
 def handle_events(state, buttons, player=0, enemy=0):
     for event in pygame.event.get():

@@ -1,6 +1,7 @@
 import time
+
 from assets.scripts.assets import AssetsLoader  # Assuming this import is needed
-from settings import ANIMATION_RATE
+from assets.scripts.settings import ANIMATION_RATE
 
 class Animation:
     def __init__(self, sprite_sheet_path, frame_dimensions, num_frames, image_duration=1, loop=True):

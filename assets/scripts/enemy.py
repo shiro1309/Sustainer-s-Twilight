@@ -1,13 +1,16 @@
 # enemy.py
 import pygame
-from settings import WHITE, FPS
 import math
 
+from assets.scripts.settings import WHITE, FPS
+from assets.scripts.utils import load_sprites, Animation
+
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, player):
+    def __init__(self, x, y, player, sprite_sheet_path, size, animation_names):
+        self.sprite_dict = load_sprites(sprite_sheet_path, size, animation_names)
         super().__init__()
-        self.image = pygame.Surface((30, 30))
-        self.image.fill((255, 0, 0))  # Red color for the enemy
+        self.animation = Animation(self.sprite_dict, 8)
+        self.image = self.animation.img()
         self.rect = self.image.get_frect()
         self.rect.center = (x, y)
         self.speed = 2
@@ -22,10 +25,12 @@ class Enemy(pygame.sprite.Sprite):
         magnitude = (dx**2 + dy**2)**0.5
         normalized_direction = (dx / magnitude, dy / magnitude)
 
-        # Define the enemy's speed
-        enemy_speed = 100
-
         # Move the enemy towards the player using the normalized direction
-        self.rect.x += normalized_direction[0] * enemy_speed * delta
-        self.rect.y += normalized_direction[1] * enemy_speed * delta
-        print(normalized_direction[0] * enemy_speed * delta, normalized_direction[1] * enemy_speed * delta, self.rect.x, self.rect.y)
+        self.rect.x += normalized_direction[0] * self.speed * delta * FPS
+        self.rect.y += normalized_direction[1] * self.speed * delta * FPS
+    
+    def draw(self, screen):
+        self.animation.update()
+        self.image = self.animation.img()
+        screen.blit(self.image, (self.rect.x, self.rect.y))
+

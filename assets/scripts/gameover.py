@@ -1,6 +1,7 @@
 # game_over_screen.py
 import pygame
-from settings import WIDTH, HEIGHT, WHITE
+
+from assets.scripts.settings import WIDTH, HEIGHT, WHITE
 from assets.scripts.utils import Button
 
 class GameOverScreen:

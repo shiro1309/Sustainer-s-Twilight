@@ -1,6 +1,7 @@
 # start_screen.py
 import pygame
-from settings import *
+
+from assets.scripts.settings import *
 from assets.scripts.events import handle_events
 from assets.scripts.utils import draw_buttons, Button
 
