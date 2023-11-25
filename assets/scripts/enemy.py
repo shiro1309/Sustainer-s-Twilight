@@ -12,6 +12,7 @@ class Enemy(pygame.sprite.Sprite):
         self.animation = Animation(self.sprite_dict, 8)
         self.image = self.animation.img()
         self.rect = self.image.get_frect()
+        print(self.rect.size)
         self.rect.center = (x, y)
         self.speed = 2
         self.player = player
@@ -29,8 +30,12 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.x += normalized_direction[0] * self.speed * delta * FPS
         self.rect.y += normalized_direction[1] * self.speed * delta * FPS
     
+    def calculate_distance(self, x1, y1, x2, y2):
+        return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
     def draw(self, screen):
-        self.animation.update()
-        self.image = self.animation.img()
-        screen.blit(self.image, (self.rect.x, self.rect.y))
+        pygame.draw.rect(screen, (0,0,0), self.rect)
+        #self.animation.update()
+        #self.image = self.animation.img()
+        #screen.blit(self.image, (self.rect.x, self.rect.y))
 

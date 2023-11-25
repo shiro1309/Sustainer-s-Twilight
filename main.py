@@ -141,6 +141,10 @@ class Game:
             if action == "resume":
                 print("Resume game")
                 self.current_state = GAME_PLAY
+                for sprite in self.all_sprites:
+                    if hasattr(sprite, 'ani_resume'):
+                        sprite.ani_resume(self.game_screen)
+
             elif action == "options":
                 print("Transition to options")
             elif action == "quit":

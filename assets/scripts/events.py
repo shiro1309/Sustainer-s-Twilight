@@ -21,7 +21,7 @@ def handle_events(state, buttons, player=0, enemy=0):
                 elif state == GAME_MENU:
                     return "resume"
     if state == GAME_PLAY:            
-        if pygame.sprite.collide_rect(player, enemy):
+        if player.rect.colliderect(enemy):
             return "collision"
 
     return None

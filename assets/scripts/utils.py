@@ -59,6 +59,9 @@ class Animation:
             if self.frame == len(self.sprite_dict[self.current_animation]) - 1:
                 self.done = True
 
+    def ani_resume(self):
+        self.animation_start = time.time()
+
     def img(self):
         return self.sprite_dict[self.current_animation][self.frame]
 
