@@ -86,7 +86,6 @@ class Game:
             self.fps = int(1 / self.delta_time)
         except ZeroDivisionError:
             self.fps = self.fps
-        print(self.delta_time)
 
     def run(self):
         while self.running:
