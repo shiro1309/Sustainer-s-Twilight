@@ -18,7 +18,7 @@ class GameOverScreen:
         game_screen.fill((255, 255, 255))
         font = pygame.font.Font(None, 36)
         self.end_time = pygame.time.get_ticks()
-        text = font.render(f"Game Over - Score: {int(round(self.score, 0))} seconds", True, (255, 0, 0))
+        text = font.render(f"Game Over - Score: {int(round(self.score, 0))}", True, (255, 0, 0))
         text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
         game_screen.blit(text, text_rect)
 

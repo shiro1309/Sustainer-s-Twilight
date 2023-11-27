@@ -1,11 +1,13 @@
 # main.py
 import pygame
+import random
+import time
 
 from assets.scripts.entity import Entity, Player
 from assets.scripts.startscreen import *
 from assets.scripts.enemy import Enemy
 from assets.scripts.events import handle_events
-from assets.scripts.utils import draw_buttons, Button
+from assets.scripts.utils import draw_buttons, Button, draw_text
 from assets.scripts.gameover import GameOverScreen
 
 from assets.scripts.settings import *
@@ -38,39 +40,53 @@ class Game:
         self.running = True
         self.current_state = START_SCREEN
         self.score = 0
-        self.all_sprites = pygame.sprite.Group()
+        self.enemy_group = pygame.sprite.Group()
         self.player = Player(WIDTH // 2, HEIGHT // 2, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
-        self.enemy = Enemy(80,80, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
-        self.all_sprites.add(self.player, self.enemy)
+        self.fps = 0
+        self.start_time = time.time()
+        #self.enemy = Enemy(80,80, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
+        #self.enemy_group.add(self.enemy)
         
         self.show_start_screen()
 
     def events(self):
         if self.current_state == START_SCREEN:
-            return handle_events(self.current_state, self.buttons, self.player, self.enemy)
+            return handle_events(self.current_state, self.buttons, self.player, self.enemy_group)
         elif self.current_state == GAME_PLAY:
-            return handle_events(self.current_state, [], self.player, self.enemy)
+            return handle_events(self.current_state, [], self.player, self.enemy_group)
         elif self.current_state == GAME_MENU:
-            return handle_events(self.current_state, self.menu_buttons, self.player, self.enemy)
+            return handle_events(self.current_state, self.menu_buttons, self.player, self.enemy_group)
         elif self.current_state == GAME_OVER:
             return handle_events(self.current_state, self.game_over_buttons)
 
     def delta_update(self):
-        self.delta_time = self.clock.tick() / 1000.0  # Convert to seconds
+        self.delta_time = time.time() - self.start_time  # Convert to seconds
+        self.start_time = time.time()
 
     def update(self):
         self.delta_update()
         self.score += self.delta_time
-        self.all_sprites.update(self.delta_time)
+        self.player.update(self.delta_time)
+        self.enemy_group.update(self.delta_time)
 
     def draw(self):
         self.game_screen.fill((125,125,125))
-        for sprite in self.all_sprites:
+        for sprite in self.enemy_group:
                 if hasattr(sprite, 'draw'):
                     sprite.draw(self.game_screen)
                 else:
                     self.game_screen.blit(sprite.image, sprite.rect.topleft)
+        self.player.draw(self.game_screen)
+        self.get_fps()
+        draw_text(str(self.fps),100,50,(255,255,255), pygame.font.Font(None, 36), self.game_screen)
         pygame.display.flip()
+
+    def get_fps(self):
+        try:
+            self.fps = int(1 / self.delta_time)
+        except ZeroDivisionError:
+            self.fps = self.fps
+        print(self.delta_time)
 
     def run(self):
         while self.running:
@@ -81,6 +97,9 @@ class Game:
             if self.current_state == GAME_PLAY:
                 self.update()
                 self.draw()
+
+                if random.random() < .01:
+                    self.spawn_enemy()
 
             elif self.current_state == GAME_MENU:
                  self.draw_game_menu()
@@ -93,17 +112,18 @@ class Game:
         exit()
 
     def show_start_screen(self):
-        for i in self.all_sprites:
-            self.all_sprites.remove(i)
+        for i in self.enemy_group:
+            self.enemy_group.remove(i)
         self.current_state = START_SCREEN
         self.current_state = self.start_screen.run(self.current_state)  # Run the start screen
         self.current_state = GAME_PLAY
-        self.delta_time = self.clock.tick(FPS) / 1000.0
+        self.delta_update()
         self.score = 0
-        self.all_sprites = pygame.sprite.Group()
+        self.enemy_group = pygame.sprite.Group()
         self.player = Player(WIDTH // 2, HEIGHT // 2, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
         self.enemy = Enemy(80, 80, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
-        self.all_sprites.add(self.player, self.enemy)
+        self.enemy_group.add(self.enemy)
+        self.start_time = time.time()
 
     def show_game_menu(self):
         self.current_state = GAME_MENU
@@ -111,7 +131,8 @@ class Game:
 
     def draw_game_menu(self):
         self.game_screen.fill(BLACK)
-        self.all_sprites.draw(self.game_screen)
+        self.enemy_group.draw(self.game_screen)
+        self.player.draw(self.game_screen)
         draw_buttons(self.menu_buttons, self.game_screen)
         pygame.display.flip()
 
@@ -141,7 +162,7 @@ class Game:
             if action == "resume":
                 print("Resume game")
                 self.current_state = GAME_PLAY
-                for sprite in self.all_sprites:
+                for sprite in self.enemy_group:
                     if hasattr(sprite, 'ani_resume'):
                         sprite.ani_resume(self.game_screen)
 
@@ -160,6 +181,20 @@ class Game:
                 print("check states for new achivments")
                 print("go back into main menu and prepere for a restart of the game")
                 self.show_start_screen()
+
+    def spawn_enemy(self):
+        # Randomly determine the initial position of the enemy
+        up = random.choice([0,1])
+        if up == 0:
+            x = random.randint(0, WIDTH)
+            y = random.choice([0,1]) * HEIGHT
+        else:
+            x = random.choice([0,1]) * WIDTH
+            y = random.randint(0, HEIGHT)
+
+        # Create a new enemy instance and add it to the sprite group
+        new_enemy = Enemy(x, y, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
+        self.enemy_group.add(new_enemy)
 
 if __name__ == "__main__":
     game = Game()

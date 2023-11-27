@@ -63,8 +63,6 @@ class Player(Entity):
         self.rect.x += normalized_dx * self.speed * delta_time * FPS
         self.rect.y += normalized_dy * self.speed * delta_time * FPS
 
-        print(calculate_distance(x,y,self.rect.x,self.rect.y))
-
         #print(num)
 
     def draw(self, screen):

@@ -3,7 +3,7 @@ import sys
 
 from assets.scripts.settings import *
 
-def handle_events(state, buttons, player=0, enemy=0):
+def handle_events(state, buttons, player=0, enemies=0):
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -20,8 +20,10 @@ def handle_events(state, buttons, player=0, enemy=0):
                     return "pause"
                 elif state == GAME_MENU:
                     return "resume"
-    if state == GAME_PLAY:            
-        if player.rect.colliderect(enemy):
-            return "collision"
+    if state == GAME_PLAY:
+        if len(enemies) >= 1:
+            for enemy in enemies:
+                if player.rect.colliderect(enemy.rect):
+                    return "collision"
 
     return None

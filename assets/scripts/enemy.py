@@ -12,10 +12,12 @@ class Enemy(pygame.sprite.Sprite):
         self.animation = Animation(self.sprite_dict, 8)
         self.image = self.animation.img()
         self.rect = self.image.get_frect()
-        print(self.rect.size)
         self.rect.center = (x, y)
         self.speed = 2
         self.player = player
+        self.health = 100
+        self.lifespan = 4  # Lifespan in seconds
+        self.spawn_time = pygame.time.get_ticks()
 
     def update(self, delta):
         # Simple AI: Move towards the player in a straight line
@@ -29,6 +31,12 @@ class Enemy(pygame.sprite.Sprite):
         # Move the enemy towards the player using the normalized direction
         self.rect.x += normalized_direction[0] * self.speed * delta * FPS
         self.rect.y += normalized_direction[1] * self.speed * delta * FPS
+
+        current_time = pygame.time.get_ticks()
+        elapsed_time = (current_time - self.spawn_time) / 1000  # Convert milliseconds to seconds
+
+        if elapsed_time >= self.lifespan:
+            self.handle_death()
     
     def calculate_distance(self, x1, y1, x2, y2):
         return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
@@ -38,4 +46,15 @@ class Enemy(pygame.sprite.Sprite):
         #self.animation.update()
         #self.image = self.animation.img()
         #screen.blit(self.image, (self.rect.x, self.rect.y))
+
+    def take_damage(self, damage):
+        self.health -= damage
+        if self.health <= 0:
+            self.health = 0  # Ensure health doesn't go below zero
+            self.handle_death()
+
+    def handle_death(self):
+        # Code to handle enemy death (e.g., play death animation, remove from groups, etc.)
+        print("Enemy defeated!")
+        self.kill()
 
