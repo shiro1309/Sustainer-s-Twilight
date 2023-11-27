@@ -66,7 +66,7 @@ class Player(Entity):
         #print(num)
 
     def draw(self, screen):
-        pygame.draw.rect(screen, (0,0,0), self.rect)
-        #self.animation.update()
-        #self.image = self.animation.img()
-        #screen.blit(self.image, (self.rect.x, self.rect.y))
+        #pygame.draw.rect(screen, (0,0,0), self.rect)
+        self.animation.update()
+        self.image = self.animation.img()
+        screen.blit(self.image, (self.rect.x, self.rect.y))
