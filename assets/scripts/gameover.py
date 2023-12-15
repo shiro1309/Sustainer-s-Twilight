@@ -8,6 +8,7 @@ class GameOverScreen:
     def __init__(self, score):
         self.end_time = 0
         self.score = score
+    
     def handle_events(self, actions):
         for action in actions:
             if action == "return_to_menu":

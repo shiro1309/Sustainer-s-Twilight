@@ -4,6 +4,7 @@ import math
 
 from assets.scripts.utils import load_sprites, Animation
 from assets.scripts.settings import * 
+from assets.scripts.healthbar import HealthBar
 
 class Entity(pygame.sprite.Sprite):
     def __init__(self, width, height, color, x, y):
@@ -28,10 +29,18 @@ class Player(Entity):
         self.animation = Animation(self.sprite_dict, 8)
         self.image = self.animation.img()
         self.animation.set_animation("walk")
+        self.attack_state = "cooldown"
         self.speed = 5
+        self.health_bar = HealthBar(10, 10, 100, 20, 100)
+        self.last_attack_time = pygame.time.get_ticks()
+        self.attack_start_time = pygame.time.get_ticks()
+        self.attacking = False
+        self.attack_range = 0
+        self.current_time = 0.0
 
-    def update(self, delta_time):
+    def update(self, delta_time, enemy_group):
         keys = pygame.key.get_pressed()
+        self.attack(enemy_group, 75, 25, 20, delta_time)
 
         dx = 0
         dy = 0
@@ -63,10 +72,71 @@ class Player(Entity):
         self.rect.x += normalized_dx * self.speed * delta_time * FPS
         self.rect.y += normalized_dy * self.speed * delta_time * FPS
 
-        #print(num)
+
+    def take_damage(self, damage):
+        self.health_bar.update(damage)
+
+    def attack(self, enemies, max_attack_range, attack_damage, knockback_distance, delta_time):
+        
+        self.current_time += delta_time * 1000
+        time_since_attack_start = self.current_time - self.attack_start_time
+        #print(max_attack_range * (time_since_attack_start / 3000))
+
+        if self.attack_state == 'growing':
+            if time_since_attack_start > 3000: # 3 seconds
+                self.attack_state = 'full size'
+                self.attack_start_time = self.current_time
+            else:
+                self.attack_range = max_attack_range * (time_since_attack_start / 3000)
+
+        elif self.attack_state == 'full size':
+            if time_since_attack_start > 2000: # 2 seconds
+                self.attack_state = 'shrinking'
+                self.attack_start_time = self.current_time
+            else:
+                self.attack_range = max_attack_range
+
+        elif self.attack_state == 'shrinking':
+            if time_since_attack_start > 2000: # 2 seconds
+                self.attack_state = 'cooldown'
+                self.attack_start_time = self.current_time
+            else:
+                self.attack_range = max_attack_range * (1 - (time_since_attack_start / 2000))
+
+        elif self.attack_state == 'cooldown':
+            if time_since_attack_start > 2000: # 2 seconds
+                self.attack_state = 'growing'
+                self.attack_start_time = self.current_time
+                self.attacking = False
+                return # don't attack during cooldown
+            else:
+                self.attacking = False
+                return # don't attack during cooldown
+            
+        self.attack_rect = pygame.FRect(self.rect.x - self.attack_range, self.rect.y - self.attack_range, self.rect.width + 2 * self.attack_range, self.rect.height + 2 * self.attack_range)
+        
+        self.attacking = True
+        # Check for collisions with enemies
+        for enemy in enemies:
+            if self.attack_rect.colliderect(enemy.rect):
+                # Calculate knockback direction
+                dx = enemy.rect.centerx - self.rect.centerx
+                dy = enemy.rect.centery - self.rect.centery
+                magnitude = (dx**2 + dy**2)**0.5
+                if magnitude != 0:
+                    knockback_direction = (dx / magnitude, dy / magnitude)
+                else:
+                    knockback_direction = (0, 0)
+
+                # Apply damage and knockback to enemy
+                enemy.take_damage(attack_damage, knockback_direction, knockback_distance)
 
     def draw(self, screen):
         #pygame.draw.rect(screen, (0,0,0), self.rect)
+        if self.attacking:
+            #pygame.draw.rect(screen, (0,0,0,50), self.attack_rect)
+            pygame.draw.rect(screen, (0,0,0,50), self.attack_rect)
         self.animation.update()
         self.image = self.animation.img()
         screen.blit(self.image, (self.rect.x, self.rect.y))
+        self.health_bar.draw(screen)

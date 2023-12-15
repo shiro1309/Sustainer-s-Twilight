@@ -16,8 +16,10 @@ class Enemy(pygame.sprite.Sprite):
         self.speed = 2
         self.player = player
         self.health = 100
-        self.lifespan = 4  # Lifespan in seconds
+        #self.lifespan = 4  # Lifespan in seconds
         self.spawn_time = pygame.time.get_ticks()
+        self.damage = 5
+        self.attack_timer = pygame.time.get_ticks()
 
     def update(self, delta):
         # Simple AI: Move towards the player in a straight line
@@ -26,17 +28,18 @@ class Enemy(pygame.sprite.Sprite):
 
         # Normalize the direction vector (make its length 1)
         magnitude = (dx**2 + dy**2)**0.5
-        normalized_direction = (dx / magnitude, dy / magnitude)
-
-        # Move the enemy towards the player using the normalized direction
-        self.rect.x += normalized_direction[0] * self.speed * delta * FPS
-        self.rect.y += normalized_direction[1] * self.speed * delta * FPS
+        if magnitude != 0:
+            normalized_direction = (dx / magnitude, dy / magnitude)
+    
+            # Move the enemy towards the player using the normalized direction
+            self.rect.x += normalized_direction[0] * self.speed * delta * FPS
+            self.rect.y += normalized_direction[1] * self.speed * delta * FPS
 
         current_time = pygame.time.get_ticks()
         elapsed_time = (current_time - self.spawn_time) / 1000  # Convert milliseconds to seconds
 
-        if elapsed_time >= self.lifespan:
-            self.handle_death()
+        #if elapsed_time >= self.lifespan:
+        #    self.handle_death()
     
     def calculate_distance(self, x1, y1, x2, y2):
         return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
@@ -47,8 +50,11 @@ class Enemy(pygame.sprite.Sprite):
         #self.image = self.animation.img()
         #screen.blit(self.image, (self.rect.x, self.rect.y))
 
-    def take_damage(self, damage):
+    def take_damage(self, damage, knockback_direction, knockback_distance):
         self.health -= damage
+        self.rect.x += knockback_direction[0] * knockback_distance
+        self.rect.y += knockback_direction[1] * knockback_distance
+        print("got hit")
         if self.health <= 0:
             self.health = 0  # Ensure health doesn't go below zero
             self.handle_death()

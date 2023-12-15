@@ -2,15 +2,17 @@
 import pygame
 import random
 import time
+import sys
 
 from assets.scripts.entity import Entity, Player
 from assets.scripts.startscreen import *
 from assets.scripts.enemy import Enemy
-from assets.scripts.events import handle_events
+#from assets.scripts.events import handle_events
 from assets.scripts.utils import draw_buttons, Button, draw_text
 from assets.scripts.gameover import GameOverScreen
 
 from assets.scripts.settings import *
+# import everything from settings.py
 
 # Initialize pygame
 pygame.init()
@@ -51,13 +53,13 @@ class Game:
 
     def events(self):
         if self.current_state == START_SCREEN:
-            return handle_events(self.current_state, self.buttons, self.player, self.enemy_group)
+            return self.handle_events(self.current_state, self.buttons, self.delta_time, self.player, self.enemy_group)
         elif self.current_state == GAME_PLAY:
-            return handle_events(self.current_state, [], self.player, self.enemy_group)
+            return self.handle_events(self.current_state, [], self.delta_time, self.player, self.enemy_group)
         elif self.current_state == GAME_MENU:
-            return handle_events(self.current_state, self.menu_buttons, self.player, self.enemy_group)
+            return self.handle_events(self.current_state, self.menu_buttons, self.delta_time, self.player, self.enemy_group)
         elif self.current_state == GAME_OVER:
-            return handle_events(self.current_state, self.game_over_buttons)
+            return self.handle_events(self.current_state, self.game_over_buttons, self.delta_time)
 
     def delta_update(self):
         self.delta_time = time.time() - self.start_time  # Convert to seconds
@@ -66,7 +68,7 @@ class Game:
     def update(self):
         self.delta_update()
         self.score += self.delta_time
-        self.player.update(self.delta_time)
+        self.player.update(self.delta_time, self.enemy_group)
         self.enemy_group.update(self.delta_time)
 
     def draw(self):
@@ -79,13 +81,45 @@ class Game:
         self.player.draw(self.game_screen)
         self.get_fps()
         draw_text(str(self.fps),100,50,(255,255,255), pygame.font.Font(None, 36), self.game_screen)
-        pygame.display.flip()
+        if self.current_state == GAME_PLAY:
+            pygame.display.flip()
 
     def get_fps(self):
         try:
             self.fps = int(1 / self.delta_time)
         except ZeroDivisionError:
             self.fps = self.fps
+
+    def handle_events(self, state, buttons, delta_time=0, player=0, enemies=0):
+        self.comulativ_time += delta_time * 1000
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                for button in buttons:
+                    if button.rect.collidepoint(event.pos):
+                        return button.action
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    if state == GAME_PLAY:
+                        return "pause"
+                    elif state == GAME_MENU:
+                        return "resume"
+        
+        if state == GAME_PLAY:
+            self.attacking_enemy_damage = 0
+            if len(enemies) >= 1:
+                for enemy in enemies:
+                    if player.rect.colliderect(enemy.rect):
+                        if enemy.attack_timer + 200 < self.comulativ_time:
+                            enemy.attack_timer = self.comulativ_time
+                            self.attacking_enemy_damage = enemy.damage
+                            return "collision"
+
+        return None
 
     def run(self):
         while self.running:
@@ -97,7 +131,7 @@ class Game:
                 self.update()
                 self.draw()
 
-                if random.random() < .01:
+                if random.random() < .01 and len(self.enemy_group) < 200:
                     self.spawn_enemy()
 
             elif self.current_state == GAME_MENU:
@@ -122,6 +156,8 @@ class Game:
         self.player = Player(WIDTH // 2, HEIGHT // 2, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
         self.enemy = Enemy(80, 80, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
         self.enemy_group.add(self.enemy)
+        self.attacking_enemy_damage = 0
+        self.comulativ_time = 0.0
         self.start_time = time.time()
 
     def show_game_menu(self):
@@ -129,9 +165,7 @@ class Game:
         # Add logic for displaying and handling the game menu options
 
     def draw_game_menu(self):
-        self.game_screen.fill(BLACK)
-        self.enemy_group.draw(self.game_screen)
-        self.player.draw(self.game_screen)
+        self.draw()
         draw_buttons(self.menu_buttons, self.game_screen)
         pygame.display.flip()
 
@@ -153,8 +187,11 @@ class Game:
             if action == "pause":
                 self.show_game_menu()
             if action == "collision":
-                self.current_state = GAME_OVER
-                self.game_over_screen = GameOverScreen(self.score)
+                print(self.attacking_enemy_damage)
+                self.player.take_damage(self.attacking_enemy_damage)
+                if self.player.health_bar.health <= 0:
+                    self.current_state = GAME_OVER
+                    self.game_over_screen = GameOverScreen(self.score)
 
         # ----------- handles the in game menu actions ----------- #
         elif self.current_state == GAME_MENU:
