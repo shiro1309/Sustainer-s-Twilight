@@ -8,8 +8,9 @@ from assets.scripts.entity import Entity, Player
 from assets.scripts.startscreen import *
 from assets.scripts.enemy import Enemy
 #from assets.scripts.events import handle_events
-from assets.scripts.utils import draw_buttons, Button, draw_text
+from assets.scripts.utils import draw_buttons, Button, draw_text, load_level, Chunk
 from assets.scripts.gameover import GameOverScreen
+from assets.scripts.camera import Camera
 
 from assets.scripts.settings import *
 # import everything from settings.py
@@ -46,6 +47,7 @@ class Game:
         self.player = Player(WIDTH // 2, HEIGHT // 2, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
         self.fps = 0
         self.start_time = time.time()
+        self.camera = Camera(WIDTH, HEIGHT)
         #self.enemy = Enemy(80,80, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
         #self.enemy_group.add(self.enemy)
         
@@ -66,18 +68,34 @@ class Game:
         self.start_time = time.time()
 
     def update(self):
+        self.clock.tick()
+        self.local_scroll = [0,0]
         self.delta_update()
         self.score += self.delta_time
-        self.player.update(self.delta_time, self.enemy_group)
-        self.enemy_group.update(self.delta_time)
+        self.local_scroll = self.player.update(self.delta_time, self.enemy_group, self.local_scroll, self.global_scroll, apply_scroll=True)
+        self.global_scroll[0] += self.local_scroll[0]
+        self.global_scroll[1] += self.local_scroll[1]
+        print(self.global_scroll)
+        self.enemy_group.update(self.delta_time, self.local_scroll)
+
 
     def draw(self):
         self.game_screen.fill((125,125,125))
-        for sprite in self.enemy_group:
-                if hasattr(sprite, 'draw'):
-                    sprite.draw(self.game_screen)
+        for row in self.map:
+            for chunk in row:
+                
+                if (chunk.x + chunk.width + self.global_scroll[0] > 0 and chunk.x + self.global_scroll[0] < WIDTH) and (chunk.y + chunk.height + self.global_scroll[1] > 0 and chunk.y + self.global_scroll[1] < HEIGHT):
+                    #print(chunk.id)
+                    chunk.draw(self.game_screen, self.global_scroll)
+
+        for enemy in self.enemy_group:
+            enemy.update_img()
+            if (enemy.rect.x + enemy.rect.width > 0 and enemy.rect.x < WIDTH) and (enemy.rect.y + enemy.rect.height > 0 and enemy.rect.y < HEIGHT):    
+                if hasattr(enemy, 'draw'):
+                    enemy.draw(self.game_screen)
                 else:
-                    self.game_screen.blit(sprite.image, sprite.rect.topleft)
+                    self.game_screen.blit(enemy.image, enemy.rect.topleft)
+        
         self.player.draw(self.game_screen)
         self.get_fps()
         draw_text(str(self.fps),100,50,(255,255,255), pygame.font.Font(None, 36), self.game_screen)
@@ -122,6 +140,7 @@ class Game:
         return None
 
     def run(self):
+        komulativ_time = 0.0
         while self.running:
             action = self.events()
             if action:
@@ -130,9 +149,12 @@ class Game:
             if self.current_state == GAME_PLAY:
                 self.update()
                 self.draw()
-
-                if random.random() < .01 and len(self.enemy_group) < 200:
+                
+                if komulativ_time > 1 / SPAWN_RATE:
+                    komulativ_time = 0.0
                     self.spawn_enemy()
+                else:
+                    komulativ_time += self.delta_time
 
             elif self.current_state == GAME_MENU:
                  self.draw_game_menu()
@@ -158,6 +180,17 @@ class Game:
         self.enemy_group.add(self.enemy)
         self.attacking_enemy_damage = 0
         self.comulativ_time = 0.0
+        self.global_scroll = [0,0]
+        self.local_scroll = [0,0]
+        self.level = load_level("assets/maps/worldone.json")
+        self.tile_image = pygame.image.load('assets/sprites/tile.png')
+
+        self.chunk_size = 16
+        self.tile_size = 16
+        self.map_width = 10
+        self.map_height = 10
+        self.map = [[Chunk(self.tile_image, self.chunk_size, self.tile_size, x * self.chunk_size * self.tile_size, y * self.chunk_size * self.tile_size) for x in range(self.map_width)] for y in range(self.map_height)]
+        
         self.start_time = time.time()
 
     def show_game_menu(self):
@@ -187,7 +220,6 @@ class Game:
             if action == "pause":
                 self.show_game_menu()
             if action == "collision":
-                print(self.attacking_enemy_damage)
                 self.player.take_damage(self.attacking_enemy_damage)
                 if self.player.health_bar.health <= 0:
                     self.current_state = GAME_OVER

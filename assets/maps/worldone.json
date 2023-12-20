@@ -1,0 +1,28 @@
+{
+    "layers": [
+        {
+            "name": "background",
+            "speed": 0.5,
+            "tiles": [
+                {"id": "bg_1", "pos": [0.0, 0.0]},
+                {"id": "bg_2", "pos": [100.0, 0.0]}
+            ]
+        },
+        {
+            "name": "platforms",
+            "speed": 1.0,
+            "tiles": [
+                {"id": "plat_1", "pos": [0.0, 200.0]},
+                {"id": "plat_2", "pos": [100.0, 200.0]}
+            ]
+        },
+        {
+            "name": "foreground",
+            "speed": 1.5,
+            "tiles": [
+                {"id": "fg_1", "pos": [0.0, 300.0]},
+                {"id": "fg_2", "pos": [100.0, 300.0]}
+            ]
+        }
+    ]
+}

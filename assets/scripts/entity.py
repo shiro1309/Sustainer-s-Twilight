@@ -37,10 +37,15 @@ class Player(Entity):
         self.attacking = False
         self.attack_range = 0
         self.current_time = 0.0
+        self.attack_color = (255,0,0,128)
+        self.stationary_surface = pygame.Surface((5*2, 5*2), pygame.SRCALPHA)
+        pygame.draw.circle(self.stationary_surface, (0,255,0), (5, 5), 5)
+        self.stationary_mask = pygame.mask.from_surface(self.stationary_surface)
+        self.stationary_rect = self.stationary_surface.get_rect(center=(WIDTH//2, HEIGHT//2))
 
-    def update(self, delta_time, enemy_group):
+    def update(self, delta_time, enemy_group, local_scroll=[0,0], global_scroll=[0,0], apply_scroll=False):
         keys = pygame.key.get_pressed()
-        self.attack(enemy_group, 75, 25, 20, delta_time)
+        self.attack(enemy_group, 75, 25, 20, delta_time, global_scroll)
 
         dx = 0
         dy = 0
@@ -59,24 +64,26 @@ class Player(Entity):
 
         # Avoid division by zero
         if magnitude == 0:
-            return
+            return local_scroll
 
         # Normalize the movement vector
         normalized_dx = dx / magnitude
         normalized_dy = dy / magnitude
-        
-        x = self.rect.x
-        y = self.rect.y
 
         # Move the player with equal speed in both directions
-        self.rect.x += normalized_dx * self.speed * delta_time * FPS
-        self.rect.y += normalized_dy * self.speed * delta_time * FPS
+        if apply_scroll:
+            local_scroll[0] = -(normalized_dx * self.speed * delta_time * FPS)
+            local_scroll[1] = -(normalized_dy * self.speed * delta_time * FPS)
+        else:
+            self.rect.x += normalized_dx * self.speed * delta_time * FPS
+            self.rect.y += normalized_dy * self.speed * delta_time * FPS
+        return local_scroll
 
 
     def take_damage(self, damage):
         self.health_bar.update(damage)
 
-    def attack(self, enemies, max_attack_range, attack_damage, knockback_distance, delta_time):
+    def attack(self, enemies, max_attack_range, attack_damage, knockback_distance, delta_time, global_scroll=(0,0)):
         
         self.current_time += delta_time * 1000
         time_since_attack_start = self.current_time - self.attack_start_time
@@ -104,7 +111,7 @@ class Player(Entity):
                 self.attack_range = max_attack_range * (1 - (time_since_attack_start / 2000))
 
         elif self.attack_state == 'cooldown':
-            if time_since_attack_start > 2000: # 2 seconds
+            if time_since_attack_start > 200: # 2 seconds
                 self.attack_state = 'growing'
                 self.attack_start_time = self.current_time
                 self.attacking = False
@@ -113,29 +120,42 @@ class Player(Entity):
                 self.attacking = False
                 return # don't attack during cooldown
             
-        self.attack_rect = pygame.FRect(self.rect.x - self.attack_range, self.rect.y - self.attack_range, self.rect.width + 2 * self.attack_range, self.rect.height + 2 * self.attack_range)
+        self.attack_surface = pygame.Surface((int(self.attack_range * 2), int(self.attack_range * 2)), pygame.SRCALPHA)
+        #self.attack_rect = pygame.FRect(self.rect.x - self.attack_range, self.rect.y - self.attack_range, self.rect.width + 2 * self.attack_range, self.rect.height + 2 * self.attack_range)
+        self.attack_color = (255,0,0,128)
+        pygame.draw.circle(self.attack_surface, self.attack_color, (int(self.attack_range), int(self.attack_range)), int(self.attack_range))
+        attack_mask = pygame.mask.from_surface(self.attack_surface)
+        self.attack_rect = self.attack_surface.get_rect(center=self.rect.center)
         
         self.attacking = True
         # Check for collisions with enemies
         for enemy in enemies:
             if self.attack_rect.colliderect(enemy.rect):
-                # Calculate knockback direction
-                dx = enemy.rect.centerx - self.rect.centerx
-                dy = enemy.rect.centery - self.rect.centery
-                magnitude = (dx**2 + dy**2)**0.5
-                if magnitude != 0:
-                    knockback_direction = (dx / magnitude, dy / magnitude)
-                else:
-                    knockback_direction = (0, 0)
+                enemy.update_mask()
+                offset_x = enemy.rect.x - self.attack_rect.x
+                offset_y = enemy.rect.y - self.attack_rect.y
+                
+                self.attack_color = (255,0,0,128)
+                
+                if attack_mask.overlap(enemy.mask, (int(offset_x), int(offset_y))):
+                    
+                    dx = enemy.rect.centerx - self.rect.centerx
+                    dy = enemy.rect.centery - self.rect.centery
+                    magnitude = (dx**2 + dy**2)**0.5
+                    if magnitude != 0:
+                        knockback_direction = (dx / magnitude, dy / magnitude)
+                    else:
+                        knockback_direction = (0, 0)
 
-                # Apply damage and knockback to enemy
-                enemy.take_damage(attack_damage, knockback_direction, knockback_distance)
+                    # Apply damage and knockback to enemy
+                    enemy.take_damage(attack_damage, knockback_direction, knockback_distance)
 
     def draw(self, screen):
         #pygame.draw.rect(screen, (0,0,0), self.rect)
         if self.attacking:
             #pygame.draw.rect(screen, (0,0,0,50), self.attack_rect)
-            pygame.draw.rect(screen, (0,0,0,50), self.attack_rect)
+            #pygame.draw.rect(screen, (0,0,0,50), self.attack_rect)
+            screen.blit(self.attack_surface, self.attack_rect)
         self.animation.update()
         self.image = self.animation.img()
         screen.blit(self.image, (self.rect.x, self.rect.y))

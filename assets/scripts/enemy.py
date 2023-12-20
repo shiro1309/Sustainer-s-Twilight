@@ -20,8 +20,9 @@ class Enemy(pygame.sprite.Sprite):
         self.spawn_time = pygame.time.get_ticks()
         self.damage = 5
         self.attack_timer = pygame.time.get_ticks()
+        self.mask = pygame.mask.from_surface(self.image)
 
-    def update(self, delta):
+    def update(self, delta, local_scroll=(0,0)):
         # Simple AI: Move towards the player in a straight line
         dx = self.player.rect.centerx - self.rect.centerx
         dy = self.player.rect.centery - self.rect.centery
@@ -30,37 +31,41 @@ class Enemy(pygame.sprite.Sprite):
         magnitude = (dx**2 + dy**2)**0.5
         if magnitude != 0:
             normalized_direction = (dx / magnitude, dy / magnitude)
-    
-            # Move the enemy towards the player using the normalized direction
-            self.rect.x += normalized_direction[0] * self.speed * delta * FPS
-            self.rect.y += normalized_direction[1] * self.speed * delta * FPS
 
+            # Move the enemy towards the player using the normalized direction
+            self.rect.x += normalized_direction[0] * self.speed * delta * FPS + local_scroll[0]
+            self.rect.y += normalized_direction[1] * self.speed * delta * FPS + local_scroll[1]
         current_time = pygame.time.get_ticks()
         elapsed_time = (current_time - self.spawn_time) / 1000  # Convert milliseconds to seconds
 
         #if elapsed_time >= self.lifespan:
         #    self.handle_death()
     
+    def update_mask(self):
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def update_img(self):
+        self.animation.update()
+
     def calculate_distance(self, x1, y1, x2, y2):
         return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
     def draw(self, screen):
-        pygame.draw.rect(screen, (0,0,0), self.rect)
-        #self.animation.update()
-        #self.image = self.animation.img()
-        #screen.blit(self.image, (self.rect.x, self.rect.y))
+        #pygame.draw.rect(screen, (0,0,0), self.rect)
+        self.update_img()
+        self.image = self.animation.img()
+        screen.blit(self.image, (self.rect.x, self.rect.y))
 
     def take_damage(self, damage, knockback_direction, knockback_distance):
         self.health -= damage
         self.rect.x += knockback_direction[0] * knockback_distance
         self.rect.y += knockback_direction[1] * knockback_distance
-        print("got hit")
+        
         if self.health <= 0:
             self.health = 0  # Ensure health doesn't go below zero
             self.handle_death()
 
     def handle_death(self):
         # Code to handle enemy death (e.g., play death animation, remove from groups, etc.)
-        print("Enemy defeated!")
         self.kill()
 

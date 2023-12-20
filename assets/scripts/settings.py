@@ -2,6 +2,7 @@
 WIDTH, HEIGHT = 800, 600  # Screen dimensions
 FPS = 60  # Frames per second
 ANIMATION_RATE = 24 # animation rate
+SPAWN_RATE = 24
 
 # Colors
 WHITE = (255, 255, 255)  # White color

@@ -1,5 +1,7 @@
 import pygame
 import time
+import os
+import json
 
 def draw_text(text, x, y, color, font, surf):
         text_surface = font.render(text, True, color)
@@ -23,6 +25,22 @@ def load_sprites(sprite_sheet_path, sprite_size, animation_names):
         
         sprite_sheets[name] = sprites
     return sprite_sheets
+
+def load_file(path):
+    with open(path, 'r') as file:
+        return file.read()
+    
+def load_files(path):
+    files = []
+    for file in os.listdir(path):
+        with open(file, 'r') as f:
+            files.append(f.read())
+
+def load_level(path):
+    with open(path, 'r') as file:
+        level_data = json.load(file)
+    return level_data
+
 
 class Animation:
     def __init__(self, sprite_dict, image_duration=1, loop=True):
@@ -72,4 +90,30 @@ class Button:
         self.action = action
         self.color = color
         self.font = pygame.font.Font(None, 36)
+
+class Tile(pygame.sprite.Sprite):
+    def __init__(self, image, x, y):
+        super().__init__()
+        self.image = image
+        self.rect = self.image.get_rect(topleft=(x, y))
+
+    def draw(self, screen, global_scroll=(0,0)):
+        screen.blit(self.image, (self.rect.x + global_scroll[0], self.rect.y + global_scroll[1]))
+
+class Chunk:
+    def __init__(self, tile_image, chunk_size, tile_size, x, y):
+        self.x = x
+        self.y = y
+        self.id = "x:"+str(x//256)+", y:"+str(y//256)
+        self.width = chunk_size * tile_size
+        self.height = chunk_size * tile_size
+        self.tiles = pygame.sprite.Group()
+        for i in range(chunk_size):
+            for j in range(chunk_size):
+                tile = Tile(tile_image, x + i * tile_size, y + j * tile_size)
+                self.tiles.add(tile)
+
+    def draw(self, screen, global_scroll=(0,0)):
+        for tile in self.tiles:
+            tile.draw(screen, global_scroll)
 
