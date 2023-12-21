@@ -8,7 +8,7 @@ from assets.scripts.entity import Entity, Player
 from assets.scripts.startscreen import *
 from assets.scripts.enemy import Enemy
 #from assets.scripts.events import handle_events
-from assets.scripts.utils import draw_buttons, Button, draw_text, load_level, Chunk
+from assets.scripts.utils import draw_buttons, Button, draw_text, load_level, Chunk, inside_render_box
 from assets.scripts.gameover import GameOverScreen
 from assets.scripts.camera import Camera
 
@@ -48,6 +48,9 @@ class Game:
         self.fps = 0
         self.start_time = time.time()
         self.camera = Camera(WIDTH, HEIGHT)
+
+        self.use_prerender = True
+
         #self.enemy = Enemy(80,80, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
         #self.enemy_group.add(self.enemy)
         
@@ -75,7 +78,6 @@ class Game:
         self.local_scroll = self.player.update(self.delta_time, self.enemy_group, self.local_scroll, self.global_scroll, apply_scroll=True)
         self.global_scroll[0] += self.local_scroll[0]
         self.global_scroll[1] += self.local_scroll[1]
-        print(self.global_scroll)
         self.enemy_group.update(self.delta_time, self.local_scroll)
 
 
@@ -83,14 +85,17 @@ class Game:
         self.game_screen.fill((125,125,125))
         for row in self.map:
             for chunk in row:
-                
-                if (chunk.x + chunk.width + self.global_scroll[0] > 0 and chunk.x + self.global_scroll[0] < WIDTH) and (chunk.y + chunk.height + self.global_scroll[1] > 0 and chunk.y + self.global_scroll[1] < HEIGHT):
-                    #print(chunk.id)
-                    chunk.draw(self.game_screen, self.global_scroll)
+                if inside_render_box(chunk.rect, WIDTH, HEIGHT, self.global_scroll):
+                    if self.use_prerender:
+                        chunk.draw_prerender(self.game_screen, self.global_scroll)
+                        print(chunk.prerender, chunk.x, chunk.y)
+                    else:
+                        chunk.draw(self.game_screen, self.global_scroll)
 
         for enemy in self.enemy_group:
             enemy.update_img()
-            if (enemy.rect.x + enemy.rect.width > 0 and enemy.rect.x < WIDTH) and (enemy.rect.y + enemy.rect.height > 0 and enemy.rect.y < HEIGHT):    
+            if inside_render_box(enemy.rect, WIDTH, HEIGHT):
+            
                 if hasattr(enemy, 'draw'):
                     enemy.draw(self.game_screen)
                 else:
@@ -189,7 +194,7 @@ class Game:
         self.tile_size = 16
         self.map_width = 10
         self.map_height = 10
-        self.map = [[Chunk(self.tile_image, self.chunk_size, self.tile_size, x * self.chunk_size * self.tile_size, y * self.chunk_size * self.tile_size) for x in range(self.map_width)] for y in range(self.map_height)]
+        self.map = [[Chunk(self.tile_image, self.chunk_size, self.tile_size, x * self.chunk_size * self.tile_size, y * self.chunk_size * self.tile_size, self.use_prerender) for x in range(self.map_width)] for y in range(self.map_height)]
         
         self.start_time = time.time()
 

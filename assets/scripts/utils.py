@@ -29,7 +29,11 @@ def load_sprites(sprite_sheet_path, sprite_size, animation_names):
 def load_file(path):
     with open(path, 'r') as file:
         return file.read()
+
+def inside_render_box(rect, global_width, global_height, scroll=(0,0)):
+    return (rect.x + rect.width + scroll[0] > 0 and rect.x + scroll[0] < global_width) and (rect.y + rect.height + scroll[1] > 0 and rect.y + scroll[1] < global_height)
     
+
 def load_files(path):
     files = []
     for file in os.listdir(path):
@@ -101,19 +105,39 @@ class Tile(pygame.sprite.Sprite):
         screen.blit(self.image, (self.rect.x + global_scroll[0], self.rect.y + global_scroll[1]))
 
 class Chunk:
-    def __init__(self, tile_image, chunk_size, tile_size, x, y):
+    def __init__(self, tile_image, chunk_size, tile_size, x, y, prerender=False):
         self.x = x
         self.y = y
         self.id = "x:"+str(x//256)+", y:"+str(y//256)
         self.width = chunk_size * tile_size
         self.height = chunk_size * tile_size
+        self.rect = pygame.Rect(x, y, self.width, self.height)
         self.tiles = pygame.sprite.Group()
         for i in range(chunk_size):
             for j in range(chunk_size):
-                tile = Tile(tile_image, x + i * tile_size, y + j * tile_size)
+                if prerender:
+                    tile = Tile(tile_image, i * tile_size, j * tile_size)
+                else:
+                    tile = Tile(tile_image, x + i * tile_size, y + j * tile_size)
                 self.tiles.add(tile)
+
+        self.prerender = None
+        
 
     def draw(self, screen, global_scroll=(0,0)):
         for tile in self.tiles:
             tile.draw(screen, global_scroll)
+
+    def draw_prerender(self, screen, global_scroll=(0,0)):
+        if self.prerender is None:
+            # Create a new Surface for the pre-rendered image
+            self.prerender = pygame.Surface((self.width, self.height))
+
+            # Draw each tile onto the pre-rendered image
+            for tile in self.tiles:
+                #self.prerender.blit(tile.image, (tile.rect.x * 16, tile.rect.y * 16))
+                tile.draw(self.prerender)
+
+        # Draw the pre-rendered image onto the screen
+        screen.blit(self.prerender, (self.x + global_scroll[0], self.y + global_scroll[1]))
 
