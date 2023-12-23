@@ -4,37 +4,137 @@
             "chunks": [
                 {
                     "id": 1,
-                    "sprite": "path_to_sprite",
-                    "dimensions": "8x8",
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
                     "spawn_enemy": true,
                     "can_walk": true
                 },
                 {
                     "id": 2,
-                    "sprite": "path_to_sprite",
-                    "dimensions": "8x8",
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
+                    "spawn_enemy": false,
+                    "can_walk": true
+                },
+                {
+                    "id": 3,
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
+                    "spawn_enemy": true,
+                    "can_walk": true
+                },
+                {
+                    "id": 4,
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
                     "spawn_enemy": false,
                     "can_walk": true
                 }
-            ]
+            ],
+            "x": 0,
+            "y": 0
         },
         {
             "chunks": [
                 {
+                    "id": 1,
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
+                    "spawn_enemy": true,
+                    "can_walk": true
+                },
+                {
+                    "id": 2,
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
+                    "spawn_enemy": false,
+                    "can_walk": true
+                },
+                {
                     "id": 3,
-                    "sprite": "path_to_sprite",
-                    "dimensions": "8x8",
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
+                    "spawn_enemy": true,
+                    "can_walk": true
+                },
+                {
+                    "id": 4,
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
+                    "spawn_enemy": false,
+                    "can_walk": true
+                }
+            ],
+            "x": 1,
+            "y": 0
+        },
+        {
+            "chunks": [
+                {
+                    "id": 1,
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
+                    "spawn_enemy": true,
+                    "can_walk": true
+                },
+                {
+                    "id": 2,
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
+                    "spawn_enemy": false,
+                    "can_walk": true
+                },
+                {
+                    "id": 3,
+                    "sprite": "assets/sprites/water.png",
+                    "dimensions": 8,
                     "spawn_enemy": true,
                     "can_walk": false
                 },
                 {
                     "id": 4,
-                    "sprite": "path_to_sprite",
-                    "dimensions": "8x8",
+                    "sprite": "assets/sprites/water.png",
+                    "dimensions": 8,
+                    "spawn_enemy": false,
+                    "can_walk": false
+                }
+            ],
+            "x": 0,
+            "y": 1
+        },
+        {
+            "chunks": [
+                {
+                    "id": 1,
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
+                    "spawn_enemy": true,
+                    "can_walk": true
+                },
+                {
+                    "id": 2,
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
+                    "spawn_enemy": false,
+                    "can_walk": true
+                },
+                {
+                    "id": 3,
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
+                    "spawn_enemy": true,
+                    "can_walk": true
+                },
+                {
+                    "id": 4,
+                    "sprite": "assets/sprites/tile.png",
+                    "dimensions": 8,
                     "spawn_enemy": false,
                     "can_walk": true
                 }
-            ]
+            ],
+            "x": 1,
+            "y": 1
         }
     ]
 }

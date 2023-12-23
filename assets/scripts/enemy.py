@@ -33,10 +33,10 @@ class Enemy(pygame.sprite.Sprite):
             normalized_direction = (dx / magnitude, dy / magnitude)
 
             # Move the enemy towards the player using the normalized direction
-            self.rect.x += normalized_direction[0] * self.speed * delta * FPS + local_scroll[0]
-            self.rect.y += normalized_direction[1] * self.speed * delta * FPS + local_scroll[1]
-        current_time = pygame.time.get_ticks()
-        elapsed_time = (current_time - self.spawn_time) / 1000  # Convert milliseconds to seconds
+            self.rect.x += normalized_direction[0] * self.speed * delta * FPS
+            self.rect.y += normalized_direction[1] * self.speed * delta * FPS
+        #current_time = pygame.time.get_ticks()
+        #elapsed_time = (current_time - self.spawn_time) / 1000  # Convert milliseconds to seconds
 
         #if elapsed_time >= self.lifespan:
         #    self.handle_death()
@@ -50,11 +50,11 @@ class Enemy(pygame.sprite.Sprite):
     def calculate_distance(self, x1, y1, x2, y2):
         return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-    def draw(self, screen):
+    def draw(self, screen, offset=(0,0)):
         #pygame.draw.rect(screen, (0,0,0), self.rect)
         self.update_img()
         self.image = self.animation.img()
-        screen.blit(self.image, (self.rect.x, self.rect.y))
+        screen.blit(self.image, (self.rect.x - offset[0], self.rect.y - offset[1]))
 
     def take_damage(self, damage, knockback_direction, knockback_distance):
         self.health -= damage

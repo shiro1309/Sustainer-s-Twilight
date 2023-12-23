@@ -2,6 +2,7 @@ import pygame
 import time
 import os
 import json
+import math
 
 def draw_text(text, x, y, color, font, surf):
         text_surface = font.render(text, True, color)
@@ -30,9 +31,30 @@ def load_file(path):
     with open(path, 'r') as file:
         return file.read()
 
-def inside_render_box(rect, global_width, global_height, scroll=(0,0)):
-    return (rect.x + rect.width + scroll[0] > 0 and rect.x + scroll[0] < global_width) and (rect.y + rect.height + scroll[1] > 0 and rect.y + scroll[1] < global_height)
+def load_json(path):
+    with open(path, 'r') as file:
+        return json.load(file)
+
+def load_chunk_data(path):
+    map_data = load_json(path)
+    Meta_chunks = []
     
+    
+    for meta_chunk_data in (map_data['meta_chunks']):
+        
+        chunks = []
+        for i, chunk_data in enumerate(meta_chunk_data['chunks']):
+            t = math.sqrt(len(meta_chunk_data['chunks']))
+            w = 0
+            if i >= 2:
+                w = 1
+            
+            chunk = Chunk(chunk_data['id'], pygame.image.load(chunk_data['sprite']).convert_alpha(), chunk_data['dimensions'], int(i%t), w,chunk_data['spawn_enemy'], chunk_data['can_walk'], prerender=True)
+            chunks.append(chunk)
+        
+        #chunks = [Chunk(chunk_data['id'], pygame.image.load(chunk_data['sprite']).convert_alpha(), chunk_data['dimensions'], int(i%t), w,chunk_data['spawn_enemy'], chunk_data['can_walk'], prerender=True) for chunk_data in meta_chunk_data['chunks']]
+        Meta_chunks.append(MetaChunk(chunks, meta_chunk_data["x"], meta_chunk_data["y"]))
+    return Meta_chunks
 
 def load_files(path):
     files = []
@@ -40,10 +62,10 @@ def load_files(path):
         with open(file, 'r') as f:
             files.append(f.read())
 
-def load_level(path):
-    with open(path, 'r') as file:
-        level_data = json.load(file)
-    return level_data
+def inside_render_box(rect, global_width, global_height, offset=(0,0)):
+    return (rect.x + rect.width - offset[0] > 0 and rect.x - offset[0] < global_width) and (rect.y + rect.height - offset[1] > 0 and rect.y - offset[1] < global_height)
+
+
 
 
 class Animation:
@@ -105,14 +127,14 @@ class Tile(pygame.sprite.Sprite):
         screen.blit(self.image, (self.rect.x + global_scroll[0], self.rect.y + global_scroll[1]))
 
 class Chunk:
-    def __init__(self, id, image, chunk_size, tile_size, x, y, spawn_enemy, can_walk, prerender=False):
+    def __init__(self, id, image, chunk_size, x, y, spawn_enemy, can_walk, prerender=False):
         self.id = id
         self.x = x
         self.y = y
-        self.id = "x:"+str(x//256)+", y:"+str(y//256)
+        tile_size = image.get_width()
         self.width = chunk_size * tile_size
         self.height = chunk_size * tile_size
-        self.rect = pygame.Rect(x, y, self.width, self.height)
+        self.rect = pygame.FRect(x, y, self.width, self.height)
         self.tiles = pygame.sprite.Group()
         self.spawn_enemy = spawn_enemy
         self.can_walk = can_walk
@@ -131,7 +153,7 @@ class Chunk:
         for tile in self.tiles:
             tile.draw(screen, global_scroll)
 
-    def draw_prerender(self, screen, global_scroll=(0,0), resize=False):
+    def draw_prerender(self, screen, global_scroll=(0,0), bias=(0,0)):
         if self.prerender is None:
             # Create a new Surface for the pre-rendered image
             self.prerender = pygame.Surface((self.width, self.height))
@@ -142,36 +164,57 @@ class Chunk:
                 tile.draw(self.prerender)
 
         # Draw the pre-rendered image onto the screen
-        screen.blit(self.prerender, (self.x + global_scroll[0], self.y + global_scroll[1]))
+        screen.blit(self.prerender, (bias[0] * self.width, bias[1] * self.height))
 
 class MetaChunk:
-    def __init__(self, chunks):
+    def __init__(self, chunks, x, y):
         self.chunks = chunks
         
         self.prerender = None
         
-        self.x = min(chunk.x for chunk in chunks)
-        self.y = min(chunk.y for chunk in chunks)
-        self.width = max(chunk.x + chunk.width for chunk in chunks) - self.x
-        self.height = max(chunk.y + chunk.height for chunk in chunks) - self.y
-    
-    def draw(self, screen, global_scroll=(0,0)):
+        self.width = math.sqrt(len(chunks)) * chunks[0].width
+        self.height = math.sqrt(len(chunks)) * chunks[1].height
+        self.x = x * self.width
+        self.y = y * self.height
+        self.rect = pygame.FRect(self.x, self.y, self.width, self.height)
+        for chunk in chunks:
+            chunk.rect = pygame.FRect((self.x + chunk.x*chunk.width, self.y + chunk.y*chunk.height, chunk.width, chunk.height))
+            print(chunk.rect.x, chunk.rect.y, chunk.width, chunk.height)
+
+    def draw(self, screen, offset=(0,0)):
         for chunk in self.chunks:
-            chunk.draw(screen, global_scroll)
+            chunk.draw(screen, offset)
             
-    def draw_prerender(self, screen, global_scroll=(0,0)):
+    def draw_prerender(self, screen, offset=(0,0)):
         if self.prerender is None:
             # Create a new Surface for the pre-rendered image
             self.prerender = pygame.Surface((self.width, self.height))
 
             # Draw each tile onto the pre-rendered image
-            for chunk in self.chunks:
-                #self.prerender.blit(tile.image, (tile.rect.x * 16, tile.rect.y * 16))
-                chunk.draw_prerender(self.prerender)
+            for i, chunk in enumerate(self.chunks):
+                #print(chunk.id)
+                t = math.sqrt(len(self.chunks))
+                w = 0
+                if i >= 2:
+                    w = 1
+                chunk.draw_prerender(self.prerender, offset, (int(i%t), w))
 
         # Draw the pre-rendered image onto the screen
-        screen.blit(self.prerender, (self.x + global_scroll[0], self.y + global_scroll[1]))
-       
+        screen.blit(self.prerender, (self.x - offset[0], self.y - offset[1]))
+
+class Minimap:
+    def __init__(self, width, height, map):
+        self.width = width
+        self.height = height
+        self.map_surf = pygame.Surface(self.width, self.height)
+        pass
+    
+    def update(self, player_pos):
+        pass
+    
+    def draw(self, screen):
+        pass
+
 def resize_surface(surface, new_width, new_height):
     # Create a new surface with the desired size
         new_surface = pygame.Surface((new_width, new_height))

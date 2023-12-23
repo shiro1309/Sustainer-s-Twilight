@@ -8,7 +8,7 @@ from assets.scripts.entity import Entity, Player
 from assets.scripts.startscreen import *
 from assets.scripts.enemy import Enemy
 #from assets.scripts.events import handle_events
-from assets.scripts.utils import draw_buttons, Button, draw_text, load_level, Chunk, inside_render_box, resize_surface, scale_surface_to_height
+from assets.scripts.utils import draw_buttons, Button, draw_text, load_chunk_data, Chunk, inside_render_box, resize_surface, scale_surface_to_height
 from assets.scripts.gameover import GameOverScreen
 from assets.scripts.camera import Camera
 
@@ -51,9 +51,6 @@ class Game:
 
         self.use_prerender = True
 
-        #self.enemy = Enemy(80,80, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
-        #self.enemy_group.add(self.enemy)
-        
         self.books = [
             scale_surface_to_height(pygame.image.load("assets/sprites/1.png").convert_alpha(), 400),
             scale_surface_to_height(pygame.image.load("assets/sprites/2.png").convert_alpha(), 400),
@@ -80,35 +77,33 @@ class Game:
 
     def update(self):
         self.clock.tick()
-        self.local_scroll = [0,0]
         self.delta_update()
         self.score += self.delta_time
-        self.local_scroll = self.player.update(self.delta_time, self.enemy_group, self.local_scroll, self.global_scroll, apply_scroll=True)
-        self.global_scroll[0] += self.local_scroll[0]
-        self.global_scroll[1] += self.local_scroll[1]
-        self.enemy_group.update(self.delta_time, self.local_scroll)
+        self.player.update(self.delta_time, self.enemy_group, self.map)
+        
+        self.scroll[0] += (self.player.rect.centerx - WIDTH / 2 - self.scroll[0])
+        self.scroll[1] += (self.player.rect.centery - HEIGHT / 2 - self.scroll[1])
+        self.render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
+        
+        self.enemy_group.update(self.delta_time, self.scroll)
 
 
     def draw(self):
         self.game_screen.fill((125,125,125))
-        for row in self.map:
-            for chunk in row:
-                if inside_render_box(chunk.rect, WIDTH, HEIGHT, self.global_scroll):
-                    if self.use_prerender:
-                        chunk.draw_prerender(self.game_screen, self.global_scroll)
-                    else:
-                        chunk.draw(self.game_screen, self.global_scroll)
-
+        
+        for meta_chunk in self.map:            
+            if inside_render_box(meta_chunk.rect, WIDTH, HEIGHT, offset=self.render_scroll):
+                meta_chunk.draw_prerender(self.game_screen, self.render_scroll)
+        
         for enemy in self.enemy_group:
             enemy.update_img()
-            if inside_render_box(enemy.rect, WIDTH, HEIGHT):
-            
+            if inside_render_box(enemy.rect, WIDTH, HEIGHT, self.render_scroll):
                 if hasattr(enemy, 'draw'):
-                    enemy.draw(self.game_screen)
+                    enemy.draw(self.game_screen, offset=self.render_scroll)
                 else:
                     self.game_screen.blit(enemy.image, enemy.rect.topleft)
         
-        self.player.draw(self.game_screen)
+        self.player.draw(self.game_screen, offset=self.render_scroll)
         self.get_fps()
         draw_text(str(self.fps),100,50,(255,255,255), pygame.font.Font(None, 36), self.game_screen)
         if self.current_state == GAME_PLAY:
@@ -197,19 +192,12 @@ class Game:
         self.enemy_group.add(self.enemy)
         self.attacking_enemy_damage = 0
         self.comulativ_time = 0.0
-        self.global_scroll = [0,0]
-        self.local_scroll = [0,0]
-        self.level = load_level("assets/maps/worldone.json")
+        self.scroll = [0,0]
+        self.map = load_chunk_data("assets/maps/worldone.json")
         self.tile_image = pygame.image.load('assets/sprites/tile.png').convert_alpha()
-
-        self.chunk_size = 16
-        self.tile_size = 16
-        self.map_width = 10
-        self.map_height = 10
-        self.map = [[Chunk(self.tile_image, self.chunk_size, self.tile_size, x * self.chunk_size * self.tile_size, y * self.chunk_size * self.tile_size, self.use_prerender) for x in range(self.map_width)] for y in range(self.map_height)]
         
         self.start_time = time.time()
-
+        
     def show_game_menu(self):
         self.current_state = GAME_MENU
         # Add logic for displaying and handling the game menu options
@@ -221,16 +209,16 @@ class Game:
         map_view_y = 50
         map_view_x = (WIDTH - 400) // 2
         
-        for row in self.map:
-            for chunk in row:
-                map_x = chunk.x // chunk.width
-                map_y = chunk.y // chunk.height
+        #for row in self.map:
+        #    for chunk in row:
+        #        map_x = chunk.x // chunk.width
+        #        map_y = chunk.y // chunk.height
 
-                pygame.draw.rect(map_view, (255,255,255), (map_x, map_y, 16, 16))
+        #        pygame.draw.rect(map_view, (255,255,255), (map_x, map_y, 16, 16))
             
-        player_map_x = (0-self.global_scroll[0]) // chunk.width
-        player_map_y = (0-self.global_scroll[1]) // chunk.height
-        pygame.draw.rect(map_view, (0,255,255), (player_map_x, player_map_y, 8, 8))
+        #player_map_x = (0-self.global_scroll[0]) // chunk.width
+        #player_map_y = (0-self.global_scroll[1]) // chunk.height
+        #pygame.draw.rect(map_view, (0,255,255), (player_map_x, player_map_y, 8, 8))
         self.game_screen.blit(map_view, (map_view_x, map_view_y))
         draw_buttons(self.menu_buttons, self.game_screen)
         pygame.display.flip()
@@ -243,24 +231,11 @@ class Game:
         img_width = (WIDTH - w) // 2
         w = 0
         for i in range(len(self.books)):
-            #self.game_screen.blit(self.books[i], (WIDTH//2 - 100 + i * 100, HEIGHT//2 - 100))
             self.game_screen.blit(self.books[i], (img_width + w, 100))
             w += self.books[i].get_width()
         pygame.display.flip()
 
     def handle_action(self, action):
-        # ----------- this section has been moved ----------- #
-        # ----------- handles the main menu actions ----------- #
-        #if self.current_state == START_SCREEN:
-        #    if action == "start":
-        #        print("Transition to game")
-        #    elif action == "shop":
-        #        print("Transition to shop")
-        #    elif action == "options":
-        #        print("Transition to options")
-        #    elif action == "quit":
-        #        self.running = False
-
         # ----------- handles the game play actions ----------- #
         if self.current_state == GAME_PLAY:
             if action == "pause":
@@ -282,7 +257,7 @@ class Game:
 
             elif action == "options":
                 print("Transition to options")
-                #self.current_state = SHOW_BOOKS
+                self.current_state = SHOW_BOOKS
             elif action == "quit":
                 print("run savings script for the game")
                 print("check states for new achivments")
@@ -305,11 +280,11 @@ class Game:
         # Randomly determine the initial position of the enemy
         up = random.choice([0,1])
         if up == 0:
-            x = random.randint(0, WIDTH)
-            y = random.choice([0,1]) * HEIGHT
+            x = random.randint(0 , WIDTH) + self.render_scroll[0]
+            y = random.choice([0,1]) * HEIGHT + self.render_scroll[1]
         else:
-            x = random.choice([0,1]) * WIDTH
-            y = random.randint(0, HEIGHT)
+            x = random.choice([0,1]) * WIDTH + self.render_scroll[0]
+            y = random.randint(0, HEIGHT) + self.render_scroll[1]
 
         # Create a new enemy instance and add it to the sprite group
         new_enemy = Enemy(x, y, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])

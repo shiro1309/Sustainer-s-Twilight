@@ -2,7 +2,7 @@
 import pygame
 import math
 
-from assets.scripts.utils import load_sprites, Animation
+from assets.scripts.utils import load_sprites, Animation, inside_render_box
 from assets.scripts.settings import * 
 from assets.scripts.healthbar import HealthBar
 
@@ -44,48 +44,82 @@ class Player(Entity):
         self.stationary_rect = self.stationary_surface.get_rect(center=(WIDTH//2, HEIGHT//2))
         self.collected_pieces = []
         self.max_attack_range = 25
+        self.movement = [False, False, False, False]
+        self.collisions = {"up": False, "down": False, "left": False, "right": False}
 
-    def update(self, delta_time, enemy_group, local_scroll=[0,0], global_scroll=[0,0], apply_scroll=False):
+    def update(self, delta_time, enemy_group, map, offset=(0,0)):
+        self.collisions = {"up": False, "down": False, "left": False, "right": False}
+        self.movement = [False, False, False, False]
         keys = pygame.key.get_pressed()
-        self.attack(enemy_group, 25, 20, delta_time, global_scroll)
+        self.attack(enemy_group, 25, 20, delta_time, offset)
 
         dx = 0
         dy = 0
 
-        if keys[pygame.K_LEFT] and self.rect.x > 0:
+        if keys[pygame.K_LEFT]:
             dx -= 1
-        if keys[pygame.K_RIGHT] and self.rect.x < WIDTH - self.rect.width:
+            self.movement[2] = True
+        if keys[pygame.K_RIGHT]:
             dx += 1
-        if keys[pygame.K_UP] and self.rect.y > 0:
+            self.movement[3] = True
+        if keys[pygame.K_UP]:
             dy -= 1
-        if keys[pygame.K_DOWN] and self.rect.y < HEIGHT - self.rect.height:
+            self.movement[0] = True
+        if keys[pygame.K_DOWN]:
             dy += 1
+            self.movement[1] = True
 
         # Calculate the length of the movement vector
         magnitude = (dx**2 + dy**2)**0.5
 
         # Avoid division by zero
         if magnitude == 0:
-            return local_scroll
+            return 
+        
 
         # Normalize the movement vector
         normalized_dx = dx / magnitude
         normalized_dy = dy / magnitude
 
         # Move the player with equal speed in both directions
-        if apply_scroll:
-            local_scroll[0] = -(normalized_dx * self.speed * delta_time * FPS)
-            local_scroll[1] = -(normalized_dy * self.speed * delta_time * FPS)
-        else:
-            self.rect.x += normalized_dx * self.speed * delta_time * FPS
-            self.rect.y += normalized_dy * self.speed * delta_time * FPS
-        return local_scroll
+        
+        self.rect.x += normalized_dx * self.speed * delta_time * FPS
+            
+        for meta_chunk in map:
+            if inside_render_box(meta_chunk.rect, WIDTH, HEIGHT, offset):
+                for chunk in meta_chunk.chunks:
+                    if not chunk.can_walk:
+                        if chunk.rect.colliderect(self.rect):
+                            if self.movement[2]:  # Left
+                                self.rect.x = chunk.rect.right
+                                self.collisions["left"] = True
+                                #local_scroll = [0,0]
+                            if self.movement[3]:  # Right
+                                self.rect.x = chunk.rect.left - self.rect.width
+                                self.collisions["right"] = True
+                                #local_scroll = [0,0]
+                            # Prevent player from moving to new position
+                            
+        self.rect.y += normalized_dy * self.speed * delta_time * FPS
+        for meta_chunk in map:
+            if inside_render_box(meta_chunk.rect, WIDTH, HEIGHT, offset):
+                for chunk in meta_chunk.chunks:
+                    if not chunk.can_walk:
+                        if chunk.rect.colliderect(self.rect):
+                            if self.movement[0]:  # Up
+                                self.rect.y = chunk.rect.bottom
+                                self.collisions["up"] = True
+                                #local_scroll = [0,0]
+                            if self.movement[1]:  # Down
+                                self.rect.y = chunk.rect.top - self.rect.height
+                                self.collisions["down"] = True
+            
 
 
     def take_damage(self, damage):
         self.health_bar.update(damage)
 
-    def attack(self, enemies, attack_damage, knockback_distance, delta_time, global_scroll=(0,0)):
+    def attack(self, enemies, attack_damage, knockback_distance, delta_time, offset=(0,0)):
         
         self.current_time += delta_time * 1000
         
@@ -163,13 +197,13 @@ class Player(Entity):
         # Apply the effect of the piece
         piece.apply_effect(self)
     
-    def draw(self, screen):
+    def draw(self, screen, offset=(0,0)):
         #pygame.draw.rect(screen, (0,0,0), self.rect)
         if self.attacking:
             #pygame.draw.rect(screen, (0,0,0,50), self.attack_rect)
             #pygame.draw.rect(screen, (0,0,0,50), self.attack_rect)
-            screen.blit(self.attack_surface, self.attack_rect)
+            screen.blit(self.attack_surface, (self.attack_rect.x - offset[0], self.attack_rect.y - offset[1]))
         self.animation.update()
         self.image = self.animation.img()
-        screen.blit(self.image, (self.rect.x, self.rect.y))
+        screen.blit(self.image, (self.rect.x - offset[0], self.rect.y - offset[1]))
         self.health_bar.draw(screen)
