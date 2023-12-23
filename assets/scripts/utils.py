@@ -105,7 +105,8 @@ class Tile(pygame.sprite.Sprite):
         screen.blit(self.image, (self.rect.x + global_scroll[0], self.rect.y + global_scroll[1]))
 
 class Chunk:
-    def __init__(self, tile_image, chunk_size, tile_size, x, y, prerender=False):
+    def __init__(self, id, image, chunk_size, tile_size, x, y, spawn_enemy, can_walk, prerender=False):
+        self.id = id
         self.x = x
         self.y = y
         self.id = "x:"+str(x//256)+", y:"+str(y//256)
@@ -113,22 +114,24 @@ class Chunk:
         self.height = chunk_size * tile_size
         self.rect = pygame.Rect(x, y, self.width, self.height)
         self.tiles = pygame.sprite.Group()
+        self.spawn_enemy = spawn_enemy
+        self.can_walk = can_walk
+        
         for i in range(chunk_size):
             for j in range(chunk_size):
                 if prerender:
-                    tile = Tile(tile_image, i * tile_size, j * tile_size)
+                    tile = Tile(image, i * tile_size, j * tile_size)
                 else:
-                    tile = Tile(tile_image, x + i * tile_size, y + j * tile_size)
+                    tile = Tile(image, x + i * tile_size, y + j * tile_size)
                 self.tiles.add(tile)
 
         self.prerender = None
-        
-
+    
     def draw(self, screen, global_scroll=(0,0)):
         for tile in self.tiles:
             tile.draw(screen, global_scroll)
 
-    def draw_prerender(self, screen, global_scroll=(0,0)):
+    def draw_prerender(self, screen, global_scroll=(0,0), resize=False):
         if self.prerender is None:
             # Create a new Surface for the pre-rendered image
             self.prerender = pygame.Surface((self.width, self.height))
@@ -141,3 +144,74 @@ class Chunk:
         # Draw the pre-rendered image onto the screen
         screen.blit(self.prerender, (self.x + global_scroll[0], self.y + global_scroll[1]))
 
+class MetaChunk:
+    def __init__(self, chunks):
+        self.chunks = chunks
+        
+        self.prerender = None
+        
+        self.x = min(chunk.x for chunk in chunks)
+        self.y = min(chunk.y for chunk in chunks)
+        self.width = max(chunk.x + chunk.width for chunk in chunks) - self.x
+        self.height = max(chunk.y + chunk.height for chunk in chunks) - self.y
+    
+    def draw(self, screen, global_scroll=(0,0)):
+        for chunk in self.chunks:
+            chunk.draw(screen, global_scroll)
+            
+    def draw_prerender(self, screen, global_scroll=(0,0)):
+        if self.prerender is None:
+            # Create a new Surface for the pre-rendered image
+            self.prerender = pygame.Surface((self.width, self.height))
+
+            # Draw each tile onto the pre-rendered image
+            for chunk in self.chunks:
+                #self.prerender.blit(tile.image, (tile.rect.x * 16, tile.rect.y * 16))
+                chunk.draw_prerender(self.prerender)
+
+        # Draw the pre-rendered image onto the screen
+        screen.blit(self.prerender, (self.x + global_scroll[0], self.y + global_scroll[1]))
+       
+def resize_surface(surface, new_width, new_height):
+    # Create a new surface with the desired size
+        new_surface = pygame.Surface((new_width, new_height))
+
+        # Scale the pre-rendered surface to the new size
+        scaled_surface = pygame.transform.scale(surface, (new_width, new_height))
+
+        # Replace the old surface with the new one
+        surface = scaled_surface
+
+        return surface
+    
+def scale_surface_to_height(surface, new_height):
+    # Get the current size of the surface
+    width, height = surface.get_size()
+
+    # Calculate the new width while maintaining the aspect ratio
+    new_width = int(new_height * width / height)
+
+    # Scale the surface to the new size
+    scaled_surface = pygame.transform.scale(surface, (new_width, new_height))
+
+    return scaled_surface
+
+class AttributePiece:
+    def __init__(self, type, x, y):
+        self.type = type
+        self.x = x
+        self.y = y
+
+    def apply_effect(self, player):
+        if self.type == 'knockback':
+            player.knockback += 1
+        elif self.type == 'attack':
+            player.attack += 1
+        elif self.type == "barrier_size":
+            player.max_attack_range += 15    
+        
+        elif self.type == 'barrier':
+            player.barrier = True
+        elif self.type == "dash_attack":
+            player.dash_attack = True
+        # Add more types as needed

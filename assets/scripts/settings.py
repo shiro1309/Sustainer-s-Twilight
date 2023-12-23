@@ -12,3 +12,4 @@ START_SCREEN = "start_screen"  # Initial game state
 GAME_PLAY = "game_play"  # Game state during active gameplay
 GAME_MENU = "game_menu"  # Game state for the pause menu
 GAME_OVER = "game_over"  # Game state for the game over screen
+SHOW_BOOKS = "show_books" # Show books screen

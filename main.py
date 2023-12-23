@@ -8,7 +8,7 @@ from assets.scripts.entity import Entity, Player
 from assets.scripts.startscreen import *
 from assets.scripts.enemy import Enemy
 #from assets.scripts.events import handle_events
-from assets.scripts.utils import draw_buttons, Button, draw_text, load_level, Chunk, inside_render_box
+from assets.scripts.utils import draw_buttons, Button, draw_text, load_level, Chunk, inside_render_box, resize_surface, scale_surface_to_height
 from assets.scripts.gameover import GameOverScreen
 from assets.scripts.camera import Camera
 
@@ -28,9 +28,9 @@ class Game:
             Button("Quit", (WIDTH // 2 - 50, HEIGHT // 2 + 80, 100, 40), "quit", WHITE),
         ]
         self.menu_buttons = [
-            Button("Resume", (WIDTH // 2 - 50, HEIGHT // 2 - 70, 100, 40), "resume", WHITE),
-            Button("Options", (WIDTH // 2 - 50, HEIGHT // 2 - 20, 100, 40), "options", WHITE),
-            Button("Quit", (WIDTH // 2 - 50, HEIGHT // 2 + 30, 100, 40), "quit", WHITE),
+            Button("Resume", (WIDTH // 2 - 50, HEIGHT // 2 +50, 100, 40), "resume", WHITE),
+            Button("Options", (WIDTH // 2 - 50, HEIGHT // 2 + 100, 100, 40), "options", WHITE),
+            Button("Quit", (WIDTH // 2 - 50, HEIGHT // 2 + 150, 100, 40), "quit", WHITE),
         ]
         self.game_over_buttons = [
             Button("Return to Menu", (WIDTH // 2 - 100, HEIGHT // 2 + 50, 200, 40), "return_to_menu", WHITE)
@@ -54,6 +54,12 @@ class Game:
         #self.enemy = Enemy(80,80, self.player, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
         #self.enemy_group.add(self.enemy)
         
+        self.books = [
+            scale_surface_to_height(pygame.image.load("assets/sprites/1.png").convert_alpha(), 400),
+            scale_surface_to_height(pygame.image.load("assets/sprites/2.png").convert_alpha(), 400),
+            scale_surface_to_height(pygame.image.load("assets/sprites/3.png").convert_alpha(), 400)
+        ]
+        
         self.show_start_screen()
 
     def events(self):
@@ -65,6 +71,8 @@ class Game:
             return self.handle_events(self.current_state, self.menu_buttons, self.delta_time, self.player, self.enemy_group)
         elif self.current_state == GAME_OVER:
             return self.handle_events(self.current_state, self.game_over_buttons, self.delta_time)
+        elif self.current_state == SHOW_BOOKS:
+            return self.handle_events(self.current_state, [], self.delta_time)
 
     def delta_update(self):
         self.delta_time = time.time() - self.start_time  # Convert to seconds
@@ -88,7 +96,6 @@ class Game:
                 if inside_render_box(chunk.rect, WIDTH, HEIGHT, self.global_scroll):
                     if self.use_prerender:
                         chunk.draw_prerender(self.game_screen, self.global_scroll)
-                        print(chunk.prerender, chunk.x, chunk.y)
                     else:
                         chunk.draw(self.game_screen, self.global_scroll)
 
@@ -131,6 +138,8 @@ class Game:
                         return "pause"
                     elif state == GAME_MENU:
                         return "resume"
+                    elif state == SHOW_BOOKS:
+                        return "resume"
         
         if state == GAME_PLAY:
             self.attacking_enemy_damage = 0
@@ -167,6 +176,9 @@ class Game:
 
             elif self.current_state == GAME_OVER:
                 self.game_over_screen.draw(self.game_screen, self.game_over_buttons[0])
+            
+            elif self.current_state == SHOW_BOOKS:
+                self.draw_books()
 
         pygame.quit()
         exit()
@@ -188,7 +200,7 @@ class Game:
         self.global_scroll = [0,0]
         self.local_scroll = [0,0]
         self.level = load_level("assets/maps/worldone.json")
-        self.tile_image = pygame.image.load('assets/sprites/tile.png')
+        self.tile_image = pygame.image.load('assets/sprites/tile.png').convert_alpha()
 
         self.chunk_size = 16
         self.tile_size = 16
@@ -204,7 +216,36 @@ class Game:
 
     def draw_game_menu(self):
         self.draw()
+        
+        map_view = pygame.Surface((400, 300))
+        map_view_y = 50
+        map_view_x = (WIDTH - 400) // 2
+        
+        for row in self.map:
+            for chunk in row:
+                map_x = chunk.x // chunk.width
+                map_y = chunk.y // chunk.height
+
+                pygame.draw.rect(map_view, (255,255,255), (map_x, map_y, 16, 16))
+            
+        player_map_x = (0-self.global_scroll[0]) // chunk.width
+        player_map_y = (0-self.global_scroll[1]) // chunk.height
+        pygame.draw.rect(map_view, (0,255,255), (player_map_x, player_map_y, 8, 8))
+        self.game_screen.blit(map_view, (map_view_x, map_view_y))
         draw_buttons(self.menu_buttons, self.game_screen)
+        pygame.display.flip()
+        
+    def draw_books(self):
+        self.game_screen.fill((125,125,125))
+        w = 0
+        for i in range(len(self.books)):
+            w += self.books[i].get_width()
+        img_width = (WIDTH - w) // 2
+        w = 0
+        for i in range(len(self.books)):
+            #self.game_screen.blit(self.books[i], (WIDTH//2 - 100 + i * 100, HEIGHT//2 - 100))
+            self.game_screen.blit(self.books[i], (img_width + w, 100))
+            w += self.books[i].get_width()
         pygame.display.flip()
 
     def handle_action(self, action):
@@ -241,6 +282,7 @@ class Game:
 
             elif action == "options":
                 print("Transition to options")
+                #self.current_state = SHOW_BOOKS
             elif action == "quit":
                 print("run savings script for the game")
                 print("check states for new achivments")
@@ -254,6 +296,10 @@ class Game:
                 print("check states for new achivments")
                 print("go back into main menu and prepere for a restart of the game")
                 self.show_start_screen()
+        
+        elif self.current_state == SHOW_BOOKS:
+            if action == "resume":
+                self.current_state = GAME_MENU
 
     def spawn_enemy(self):
         # Randomly determine the initial position of the enemy

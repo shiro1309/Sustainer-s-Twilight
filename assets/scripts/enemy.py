@@ -19,7 +19,7 @@ class Enemy(pygame.sprite.Sprite):
         #self.lifespan = 4  # Lifespan in seconds
         self.spawn_time = pygame.time.get_ticks()
         self.damage = 5
-        self.attack_timer = pygame.time.get_ticks()
+        self.attack_timer = 0
         self.mask = pygame.mask.from_surface(self.image)
 
     def update(self, delta, local_scroll=(0,0)):

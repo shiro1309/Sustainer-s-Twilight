@@ -32,8 +32,8 @@ class Player(Entity):
         self.attack_state = "cooldown"
         self.speed = 5
         self.health_bar = HealthBar(10, 10, 100, 20, 100)
-        self.last_attack_time = pygame.time.get_ticks()
-        self.attack_start_time = pygame.time.get_ticks()
+        self.last_attack_time = 0
+        self.attack_start_time = 0
         self.attacking = False
         self.attack_range = 0
         self.current_time = 0.0
@@ -42,10 +42,12 @@ class Player(Entity):
         pygame.draw.circle(self.stationary_surface, (0,255,0), (5, 5), 5)
         self.stationary_mask = pygame.mask.from_surface(self.stationary_surface)
         self.stationary_rect = self.stationary_surface.get_rect(center=(WIDTH//2, HEIGHT//2))
+        self.collected_pieces = []
+        self.max_attack_range = 25
 
     def update(self, delta_time, enemy_group, local_scroll=[0,0], global_scroll=[0,0], apply_scroll=False):
         keys = pygame.key.get_pressed()
-        self.attack(enemy_group, 75, 25, 20, delta_time, global_scroll)
+        self.attack(enemy_group, 25, 20, delta_time, global_scroll)
 
         dx = 0
         dy = 0
@@ -83,43 +85,12 @@ class Player(Entity):
     def take_damage(self, damage):
         self.health_bar.update(damage)
 
-    def attack(self, enemies, max_attack_range, attack_damage, knockback_distance, delta_time, global_scroll=(0,0)):
+    def attack(self, enemies, attack_damage, knockback_distance, delta_time, global_scroll=(0,0)):
         
         self.current_time += delta_time * 1000
-        time_since_attack_start = self.current_time - self.attack_start_time
-        #print(max_attack_range * (time_since_attack_start / 3000))
-
-        if self.attack_state == 'growing':
-            if time_since_attack_start > 3000: # 3 seconds
-                self.attack_state = 'full size'
-                self.attack_start_time = self.current_time
-            else:
-                self.attack_range = max_attack_range * (time_since_attack_start / 3000)
-
-        elif self.attack_state == 'full size':
-            if time_since_attack_start > 2000: # 2 seconds
-                self.attack_state = 'shrinking'
-                self.attack_start_time = self.current_time
-            else:
-                self.attack_range = max_attack_range
-
-        elif self.attack_state == 'shrinking':
-            if time_since_attack_start > 2000: # 2 seconds
-                self.attack_state = 'cooldown'
-                self.attack_start_time = self.current_time
-            else:
-                self.attack_range = max_attack_range * (1 - (time_since_attack_start / 2000))
-
-        elif self.attack_state == 'cooldown':
-            if time_since_attack_start > 200: # 2 seconds
-                self.attack_state = 'growing'
-                self.attack_start_time = self.current_time
-                self.attacking = False
-                return # don't attack during cooldown
-            else:
-                self.attacking = False
-                return # don't attack during cooldown
-            
+        
+        self.barrier_attack()
+        
         self.attack_surface = pygame.Surface((int(self.attack_range * 2), int(self.attack_range * 2)), pygame.SRCALPHA)
         #self.attack_rect = pygame.FRect(self.rect.x - self.attack_range, self.rect.y - self.attack_range, self.rect.width + 2 * self.attack_range, self.rect.height + 2 * self.attack_range)
         self.attack_color = (255,0,0,128)
@@ -150,6 +121,48 @@ class Player(Entity):
                     # Apply damage and knockback to enemy
                     enemy.take_damage(attack_damage, knockback_direction, knockback_distance)
 
+    def barrier_attack(self):
+        time_since_attack_start = self.current_time - self.attack_start_time
+        #print(max_attack_range * (time_since_attack_start / 3000))
+
+        if self.attack_state == 'growing':
+            if time_since_attack_start > 3000: # 3 seconds
+                self.attack_state = 'full size'
+                self.attack_start_time = self.current_time
+            else:
+                self.attack_range = self.max_attack_range * (time_since_attack_start / 3000)
+
+        elif self.attack_state == 'full size':
+            if time_since_attack_start > 2000: # 2 seconds
+                self.attack_state = 'shrinking'
+                self.attack_start_time = self.current_time
+            else:
+                self.attack_range = self.max_attack_range
+
+        elif self.attack_state == 'shrinking':
+            if time_since_attack_start > 2000: # 2 seconds
+                self.attack_state = 'cooldown'
+                self.attack_start_time = self.current_time
+            else:
+                self.attack_range = self.max_attack_range * (1 - (time_since_attack_start / 2000))
+
+        elif self.attack_state == 'cooldown':
+            if time_since_attack_start > 2000: # 2 seconds
+                self.attack_state = 'growing'
+                self.attack_start_time = self.current_time
+                self.attacking = False
+                return # don't attack during cooldown
+            else:
+                self.attacking = False
+                return # don't attack during cooldown
+    
+    def collect_piece(self, piece):
+        # Add the piece to the player's collected pieces
+        self.collected_pieces.append(piece)
+
+        # Apply the effect of the piece
+        piece.apply_effect(self)
+    
     def draw(self, screen):
         #pygame.draw.rect(screen, (0,0,0), self.rect)
         if self.attacking:

@@ -1,27 +1,39 @@
 {
-    "layers": [
+    "meta_chunks": [
         {
-            "name": "background",
-            "speed": 0.5,
-            "tiles": [
-                {"id": "bg_1", "pos": [0.0, 0.0]},
-                {"id": "bg_2", "pos": [100.0, 0.0]}
+            "chunks": [
+                {
+                    "id": 1,
+                    "sprite": "path_to_sprite",
+                    "dimensions": "8x8",
+                    "spawn_enemy": true,
+                    "can_walk": true
+                },
+                {
+                    "id": 2,
+                    "sprite": "path_to_sprite",
+                    "dimensions": "8x8",
+                    "spawn_enemy": false,
+                    "can_walk": true
+                }
             ]
         },
         {
-            "name": "platforms",
-            "speed": 1.0,
-            "tiles": [
-                {"id": "plat_1", "pos": [0.0, 200.0]},
-                {"id": "plat_2", "pos": [100.0, 200.0]}
-            ]
-        },
-        {
-            "name": "foreground",
-            "speed": 1.5,
-            "tiles": [
-                {"id": "fg_1", "pos": [0.0, 300.0]},
-                {"id": "fg_2", "pos": [100.0, 300.0]}
+            "chunks": [
+                {
+                    "id": 3,
+                    "sprite": "path_to_sprite",
+                    "dimensions": "8x8",
+                    "spawn_enemy": true,
+                    "can_walk": false
+                },
+                {
+                    "id": 4,
+                    "sprite": "path_to_sprite",
+                    "dimensions": "8x8",
+                    "spawn_enemy": false,
+                    "can_walk": true
+                }
             ]
         }
     ]
