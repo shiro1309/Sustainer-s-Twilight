@@ -49,12 +49,37 @@ def load_chunk_data(path):
             if i >= 2:
                 w = 1
             
-            chunk = Chunk(chunk_data['id'], pygame.image.load(chunk_data['sprite']).convert_alpha(), chunk_data['dimensions'], int(i%t), w,chunk_data['spawn_enemy'], chunk_data['can_walk'], prerender=True)
+            chunk = Chunk(chunk_data['id'], pygame.image.load(chunk_data['sprite']).convert_alpha(), chunk_data['dimensions'], int(i%t), w, chunk_data['spawn_enemy'], chunk_data['can_walk'], chunk_data['sprite'],prerender=True)
             chunks.append(chunk)
         
         #chunks = [Chunk(chunk_data['id'], pygame.image.load(chunk_data['sprite']).convert_alpha(), chunk_data['dimensions'], int(i%t), w,chunk_data['spawn_enemy'], chunk_data['can_walk'], prerender=True) for chunk_data in meta_chunk_data['chunks']]
         Meta_chunks.append(MetaChunk(chunks, meta_chunk_data["x"], meta_chunk_data["y"]))
     return Meta_chunks
+
+def save_chunk_data(path, meta_chunks):
+    map_data = {'meta_chunks': []}
+    
+    for meta_chunk in meta_chunks:
+        meta_chunk_data = {
+            'chunks': [],
+            'x': meta_chunk.x // meta_chunk.width,
+            'y': meta_chunk.y // meta_chunk.height
+        }
+        
+        for chunk in meta_chunk.chunks:
+            chunk_data = {
+                'id': chunk.id,
+                'sprite': chunk.sprite,
+                'dimensions': 8,
+                'spawn_enemy': chunk.spawn_enemy,
+                'can_walk': chunk.can_walk
+            }
+            meta_chunk_data['chunks'].append(chunk_data)
+        
+        map_data['meta_chunks'].append(meta_chunk_data)
+    
+    with open(path, 'w') as file:
+        json.dump(map_data, file)
 
 def load_files(path):
     files = []
@@ -127,27 +152,40 @@ class Tile(pygame.sprite.Sprite):
         screen.blit(self.image, (self.rect.x + global_scroll[0], self.rect.y + global_scroll[1]))
 
 class Chunk:
-    def __init__(self, id, image, chunk_size, x, y, spawn_enemy, can_walk, prerender=False):
+    def __init__(self, id, image, chunk_size, x, y, spawn_enemy, can_walk, image_path, prerender=False):
         self.id = id
         self.x = x
         self.y = y
-        tile_size = image.get_width()
-        self.width = chunk_size * tile_size
-        self.height = chunk_size * tile_size
+        self.tile_size = image.get_width()
+        self.chunk_size = chunk_size
+        self.width = chunk_size * self.tile_size
+        self.height = chunk_size * self.tile_size
         self.rect = pygame.FRect(x, y, self.width, self.height)
         self.tiles = pygame.sprite.Group()
         self.spawn_enemy = spawn_enemy
         self.can_walk = can_walk
+        self.image = image
+        self.sprite = image_path
+        self.tile(prerender)
         
-        for i in range(chunk_size):
-            for j in range(chunk_size):
-                if prerender:
-                    tile = Tile(image, i * tile_size, j * tile_size)
-                else:
-                    tile = Tile(image, x + i * tile_size, y + j * tile_size)
-                self.tiles.add(tile)
+        #for i in range(chunk_size):
+        #    for j in range(chunk_size):
+        #        if prerender:
+        #            tile = Tile(image, i * tile_size, j * tile_size)
+        #        else:
+        #            tile = Tile(image, x + i * tile_size, y + j * tile_size)
+        #        self.tiles.add(tile)
 
         self.prerender = None
+    
+    def tile(self, prerender):
+        for i in range(self.chunk_size):
+            for j in range(self.chunk_size):
+                if prerender:
+                    tile = Tile(self.image, i * self.tile_size, j * self.tile_size)
+                else:
+                    tile = Tile(self.image, self.x + i * self.tile_size, self.y + j * self.tile_size)
+                self.tiles.add(tile)
     
     def draw(self, screen, global_scroll=(0,0)):
         for tile in self.tiles:
@@ -176,10 +214,12 @@ class MetaChunk:
         self.height = math.sqrt(len(chunks)) * chunks[1].height
         self.x = x * self.width
         self.y = y * self.height
+        self.id_x = x
+        self.id_y = y
         self.rect = pygame.FRect(self.x, self.y, self.width, self.height)
-        for chunk in chunks:
-            chunk.rect = pygame.FRect((self.x + chunk.x*chunk.width, self.y + chunk.y*chunk.height, chunk.width, chunk.height))
-            print(chunk.rect.x, chunk.rect.y, chunk.width, chunk.height)
+        #for chunk in chunks:
+        #    chunk.rect = pygame.FRect((self.x + chunk.x*chunk.width, self.y + chunk.y*chunk.height, chunk.width, chunk.height))
+        #    print(chunk.rect.x, chunk.rect.y, chunk.width, chunk.height)
 
     def draw(self, screen, offset=(0,0)):
         for chunk in self.chunks:
@@ -251,10 +291,20 @@ class AttributePiece:
         elif self.type == 'attack':
             player.attack += 1
         elif self.type == "barrier_size":
-            player.max_attack_range += 15    
-        
+            player.max_attack_range += 15
         elif self.type == 'barrier':
             player.barrier = True
         elif self.type == "dash_attack":
             player.dash_attack = True
         # Add more types as needed
+
+def translate(value, leftMin, leftMax, rightMin, rightMax):
+    # Figure out how 'wide' each range is
+    leftSpan = leftMax - leftMin
+    rightSpan = rightMax - rightMin
+
+    # Convert the left range into a 0-1 range (float)
+    valueScaled = float(value - leftMin) / float(leftSpan)
+
+    # Convert the 0-1 range into a value in the right range.
+    return rightMin + (valueScaled * rightSpan)

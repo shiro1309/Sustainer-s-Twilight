@@ -4,6 +4,7 @@ import math
 
 from assets.scripts.settings import WHITE, FPS
 from assets.scripts.utils import load_sprites, Animation
+from assets.scripts.entity import Crystal
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, player, sprite_sheet_path, size, animation_names):
@@ -22,7 +23,7 @@ class Enemy(pygame.sprite.Sprite):
         self.attack_timer = 0
         self.mask = pygame.mask.from_surface(self.image)
 
-    def update(self, delta, local_scroll=(0,0)):
+    def update(self, delta):
         # Simple AI: Move towards the player in a straight line
         dx = self.player.rect.centerx - self.rect.centerx
         dy = self.player.rect.centery - self.rect.centery
@@ -56,14 +57,16 @@ class Enemy(pygame.sprite.Sprite):
         self.image = self.animation.img()
         screen.blit(self.image, (self.rect.x - offset[0], self.rect.y - offset[1]))
 
-    def take_damage(self, damage, knockback_direction, knockback_distance):
+    def take_damage(self, damage, knockback_direction, knockback_distance, crystal_list):
         self.health -= damage
         self.rect.x += knockback_direction[0] * knockback_distance
         self.rect.y += knockback_direction[1] * knockback_distance
         
         if self.health <= 0:
             self.health = 0  # Ensure health doesn't go below zero
+            crystal_list.add(Crystal(self.rect.x, self.rect.y))
             self.handle_death()
+            return 
 
     def handle_death(self):
         # Code to handle enemy death (e.g., play death animation, remove from groups, etc.)

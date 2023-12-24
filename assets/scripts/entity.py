@@ -31,7 +31,7 @@ class Player(Entity):
         self.animation.set_animation("walk")
         self.attack_state = "cooldown"
         self.speed = 5
-        self.health_bar = HealthBar(10, 10, 100, 20, 100)
+        self.health_bar = HealthBar(x - (100//2), y + self.rect.height + 5, 100, 20, 100)
         self.last_attack_time = 0
         self.attack_start_time = 0
         self.attacking = False
@@ -46,12 +46,13 @@ class Player(Entity):
         self.max_attack_range = 25
         self.movement = [False, False, False, False]
         self.collisions = {"up": False, "down": False, "left": False, "right": False}
+        self.score = 0
 
-    def update(self, delta_time, enemy_group, map, offset=(0,0)):
+    def update(self, delta, enemy_group, map, crystall_list, offset=(0,0)):
         self.collisions = {"up": False, "down": False, "left": False, "right": False}
         self.movement = [False, False, False, False]
         keys = pygame.key.get_pressed()
-        self.attack(enemy_group, 25, 20, delta_time, offset)
+        self.attack(enemy_group, 25, 20, delta,crystall_list, offset)
 
         dx = 0
         dy = 0
@@ -74,6 +75,7 @@ class Player(Entity):
 
         # Avoid division by zero
         if magnitude == 0:
+            self.pickup_crystals(crystall_list, delta)
             return 
         
 
@@ -83,7 +85,7 @@ class Player(Entity):
 
         # Move the player with equal speed in both directions
         
-        self.rect.x += normalized_dx * self.speed * delta_time * FPS
+        self.rect.x += normalized_dx * self.speed * delta * FPS
             
         for meta_chunk in map:
             if inside_render_box(meta_chunk.rect, WIDTH, HEIGHT, offset):
@@ -100,7 +102,7 @@ class Player(Entity):
                                 #local_scroll = [0,0]
                             # Prevent player from moving to new position
                             
-        self.rect.y += normalized_dy * self.speed * delta_time * FPS
+        self.rect.y += normalized_dy * self.speed * delta * FPS
         for meta_chunk in map:
             if inside_render_box(meta_chunk.rect, WIDTH, HEIGHT, offset):
                 for chunk in meta_chunk.chunks:
@@ -113,15 +115,17 @@ class Player(Entity):
                             if self.movement[1]:  # Down
                                 self.rect.y = chunk.rect.top - self.rect.height
                                 self.collisions["down"] = True
+        print(self.collisions)
+        self.pickup_crystals(crystall_list, delta)
             
 
 
     def take_damage(self, damage):
         self.health_bar.update(damage)
 
-    def attack(self, enemies, attack_damage, knockback_distance, delta_time, offset=(0,0)):
+    def attack(self, enemies, attack_damage, knockback_distance, delta, crystal_list, offset=(0,0)):
         
-        self.current_time += delta_time * 1000
+        self.current_time += delta * 1000
         
         self.barrier_attack()
         
@@ -153,7 +157,7 @@ class Player(Entity):
                         knockback_direction = (0, 0)
 
                     # Apply damage and knockback to enemy
-                    enemy.take_damage(attack_damage, knockback_direction, knockback_distance)
+                    enemy.take_damage(attack_damage, knockback_direction, knockback_distance, crystal_list)
 
     def barrier_attack(self):
         time_since_attack_start = self.current_time - self.attack_start_time
@@ -196,6 +200,22 @@ class Player(Entity):
 
         # Apply the effect of the piece
         piece.apply_effect(self)
+        
+    def pickup_crystals(self, crystal_list, delta):
+        for crystal in crystal_list:
+            dx = self.rect.centerx - crystal.rect.centerx
+            dy = self.rect.centery - crystal.rect.centery
+            distance = math.sqrt(dx**2 + dy**2)
+
+            if distance < 75:
+                # Normalize the direction vector (make its length 1)
+                magnitude = distance
+                if magnitude != 0:
+                    normalized_direction = (dx / magnitude, dy / magnitude)
+
+                    # Move the crystal towards the player using the normalized direction
+                    crystal.rect.x += normalized_direction[0] * crystal.speed * delta * FPS
+                    crystal.rect.y += normalized_direction[1] * crystal.speed * delta * FPS
     
     def draw(self, screen, offset=(0,0)):
         #pygame.draw.rect(screen, (0,0,0), self.rect)
@@ -207,3 +227,33 @@ class Player(Entity):
         self.image = self.animation.img()
         screen.blit(self.image, (self.rect.x - offset[0], self.rect.y - offset[1]))
         self.health_bar.draw(screen)
+        
+class Interactable(pygame.sprite.Sprite):
+    def __init__(self, x, y, image_path):
+        super().__init__()
+        self.image = pygame.image.load(image_path).convert_alpha()
+        self.rect = self.image.get_frect()
+        self.rect.topleft = (x, y)
+
+    def update(self, player):
+        # Check for collision with the player
+        if self.rect.colliderect(player.rect):
+            self.interact(player)
+
+    def interact(self, player):
+        # This method should be overridden by subclasses
+        pass
+    
+class Crystal(Interactable):
+    def __init__(self, x, y):
+        super().__init__(x, y, 'assets/sprites/shard.png')
+        self.speed = 10
+
+    def interact(self, player):
+        # Increase the score's score
+        player.score += 1
+        # Remove the crystal
+        self.kill()
+    
+    def draw(self, screen, offset=(0,0)):
+        screen.blit(self.image, (self.rect.x - offset[0], self.rect.y - offset[1]))

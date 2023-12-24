@@ -7,3 +7,6 @@ for i in l:
     if i == 2:
         w = 1
     print(int(i%t), w)
+    
+for i in range(100):
+    print(i%2)

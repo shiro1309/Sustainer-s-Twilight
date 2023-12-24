@@ -11,6 +11,7 @@ from assets.scripts.enemy import Enemy
 from assets.scripts.utils import draw_buttons, Button, draw_text, load_chunk_data, Chunk, inside_render_box, resize_surface, scale_surface_to_height
 from assets.scripts.gameover import GameOverScreen
 from assets.scripts.camera import Camera
+from assets.scripts.healthbar import ProgressBar
 
 from assets.scripts.settings import *
 # import everything from settings.py
@@ -43,7 +44,6 @@ class Game:
         self.running = True
         self.current_state = START_SCREEN
         self.score = 0
-        self.enemy_group = pygame.sprite.Group()
         self.player = Player(WIDTH // 2, HEIGHT // 2, "assets/sprites/Sprite-0001.png", (16,16), animation_names=["idle", "walk"])
         self.fps = 0
         self.start_time = time.time()
@@ -79,19 +79,22 @@ class Game:
         self.clock.tick()
         self.delta_update()
         self.score += self.delta_time
-        self.player.update(self.delta_time, self.enemy_group, self.map)
+        self.player.update(self.delta_time, self.enemy_group, self.map, self.crystal_group)
         
         self.scroll[0] += (self.player.rect.centerx - WIDTH / 2 - self.scroll[0])
         self.scroll[1] += (self.player.rect.centery - HEIGHT / 2 - self.scroll[1])
         self.render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
         
-        self.enemy_group.update(self.delta_time, self.scroll)
+        self.enemy_group.update(self.delta_time)
+        
+        self.crystal_group.update(self.player)
+        self.player.score = self.ProgressBar.update(self.player.score)
 
 
     def draw(self):
         self.game_screen.fill((125,125,125))
         
-        for meta_chunk in self.map:            
+        for meta_chunk in self.map:
             if inside_render_box(meta_chunk.rect, WIDTH, HEIGHT, offset=self.render_scroll):
                 meta_chunk.draw_prerender(self.game_screen, self.render_scroll)
         
@@ -103,7 +106,15 @@ class Game:
                 else:
                     self.game_screen.blit(enemy.image, enemy.rect.topleft)
         
+        for crystal in self.crystal_group:
+            if inside_render_box(crystal.rect, WIDTH, HEIGHT, self.render_scroll):
+                if hasattr(crystal, 'draw'):
+                    crystal.draw(self.game_screen, offset=self.render_scroll)
+                else:
+                    self.game_screen.blit(crystal.image, crystal.rect.topleft)
+        
         self.player.draw(self.game_screen, offset=self.render_scroll)
+        self.ProgressBar.draw(self.game_screen)
         self.get_fps()
         draw_text(str(self.fps),100,50,(255,255,255), pygame.font.Font(None, 36), self.game_screen)
         if self.current_state == GAME_PLAY:
@@ -161,7 +172,7 @@ class Game:
                 
                 if komulativ_time > 1 / SPAWN_RATE:
                     komulativ_time = 0.0
-                    self.spawn_enemy()
+                    #self.spawn_enemy()
                 else:
                     komulativ_time += self.delta_time
 
@@ -179,8 +190,6 @@ class Game:
         exit()
 
     def show_start_screen(self):
-        for i in self.enemy_group:
-            self.enemy_group.remove(i)
         self.current_state = START_SCREEN
         self.current_state = self.start_screen.run(self.current_state)  # Run the start screen
         self.current_state = GAME_PLAY
@@ -194,7 +203,11 @@ class Game:
         self.comulativ_time = 0.0
         self.scroll = [0,0]
         self.map = load_chunk_data("assets/maps/worldone.json")
-        self.tile_image = pygame.image.load('assets/sprites/tile.png').convert_alpha()
+        self.crystal_group = pygame.sprite.Group()
+        self.ProgressBar = ProgressBar(10,10, WIDTH - 20, 50, 30)
+        for meta in self.map:
+            for chunk in meta.chunks:
+                print(chunk.can_walk)
         
         self.start_time = time.time()
         
